@@ -33,8 +33,16 @@ const userSchema=new mongoose.Schema({
     }
 });
 
+
+// allow evvery instance of user document to generate own auth token
+// jwt(payload,secretkey,[options,callback]), where options e.g. jwt.sign({ _id: this._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
 userSchema.methods.generateAuthToken=function(){
-    const token=jwt.sign({_id:this._id},process.env.JWT_SECRET);
+    const token = jwt.sign(
+        { _id: this._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+    );
     return token;
 }
 

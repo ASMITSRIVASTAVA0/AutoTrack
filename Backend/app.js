@@ -10,6 +10,8 @@ const express=require("express");
 
 const cors=require("cors");
 
+const cookieParser=require("cookie-parser");
+
 const app=express();
 
 const connectToDb=require("./db/db");
@@ -19,6 +21,8 @@ const userRoutes=require("./routes/user.routes");
 connectToDb();
 
 app.use(cors());
+
+app.use(cookieParser());
 
 
 // this middleware parse incoming req with content-type of json, make parsed data available in req.body

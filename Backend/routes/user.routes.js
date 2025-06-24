@@ -1,5 +1,6 @@
 const express=require("express");
 const router=express.Router();
+const authMiddleware=require("../middlewares/auth.middleware");
 
 
 // destructuring body function from exported object of express-validator
@@ -18,5 +19,18 @@ router.post("/register",[
 userController.registerUser
 )
 
+
+router.post("/login",[
+    body("email").isEmail().withMessage("Invalid Email"),
+    body("password").isLength({min:6}).withMessage("Invalid Password")
+],
+userController.logInUser
+)
+
+
+
+router.get("/profile",authMiddleware.authUser,userController.getUserProfile);
+
+router.get("/logout",authMiddleware.authUser,userController.logoutUser);
 
 module.exports=router;
