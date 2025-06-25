@@ -272,3 +272,134 @@ Logs out the authenticated user by blacklisting the current JWT token and cleari
 curl -X GET http://localhost:3000/users/logout \
   -H "Authorization: Bearer <token>"
 ```
+
+---
+
+# Captain Registration API
+
+## Endpoint
+
+`POST /captains/register`
+
+## Description
+
+Registers a new captain (driver) in the system with vehicle details. This endpoint validates the input, hashes the password, creates the captain, and returns an authentication token along with the captain data.
+
+## Request Body
+
+Send a JSON object with the following structure:
+
+```json
+{
+  "fullname": {
+    "firstname": "Alice",
+    "lastname": "Smith"
+  },
+  "email": "alice.smith@example.com",
+  "password": "yourpassword",
+  "vehicle": {
+    "color": "Red",
+    "plate": "XYZ123",
+    "capacity": 4,
+    "vehicleType": "Car"
+  }
+}
+```
+
+### Field Requirements
+
+- `fullname.firstname` (string, required): Minimum 3 characters.
+- `fullname.lastname` (string, optional)
+- `email` (string, required): Must be a valid email address.
+- `password` (string, required): Minimum 6 characters.
+- `vehicle.color` (string, required)
+- `vehicle.plate` (string, required): Minimum 3 characters.
+- `vehicle.capacity` (integer, required): Minimum 1.
+- `vehicle.vehicleType` (string, required): One of `"Car"`, `"Motorcycle"`, `"Auto"`.
+
+## Responses
+
+### Success
+
+- **Status Code:** `201 Created`
+- **Body:**
+  ```json
+  {
+    "token": "<token>",
+    "captain": {
+      "_id": "<captain_id>",
+      "fullname": {
+        "firstname": "Alice",
+        "lastname": "Smith"
+      },
+      "email": "alice.smith@example.com",
+      "socketId": null,
+      "status": "inactive",
+      "vehicle": {
+        "color": "Red",
+        "plate": "XYZ123",
+        "capacity": 4,
+        "vehicleType": "Car"
+      },
+      "location": {
+        "lat": null,
+        "lng": null
+      }
+    }
+  }
+  ```
+
+### Validation Error
+
+- **Status Code:** `400 Bad Request`
+- **Body:**
+  ```json
+  {
+    "errors": [
+      {
+        "msg": "First name must be 3 characters long",
+        "param": "fullname.firstname",
+        "location": "body"
+      }
+      // ...other errors
+    ]
+  }
+  ```
+
+### Duplicate Email
+
+- **Status Code:** `400 Bad Request`
+- **Body:**
+  ```json
+  {
+    "message": "Captain with same email id already exists"
+  }
+  ```
+
+### Missing Fields
+
+- **Status Code:** `500 Internal Server Error`
+- **Body:**
+  ```json
+  {
+    "message": "All fields are required"
+  }
+  ```
+
+## Example Request
+
+```bash
+curl -X POST http://localhost:3000/captains/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullname": {"firstname": "Alice", "lastname": "Smith"},
+    "email": "alice.smith@example.com",
+    "password": "yourpassword",
+    "vehicle": {
+      "color": "Red",
+      "plate": "XYZ123",
+      "capacity": 4,
+      "vehicleType": "Car"
+    }
+  }'
+```
