@@ -5,7 +5,10 @@ const blackListTokenModel = require("../models/blacklistToken.model");
 
 
 module.exports.registerCaptain=async(req,res,next)=>{
+    console.log("captain register req ");
+    
     const errors=validationResult(req);
+    console.log(errors);
     if(!errors.isEmpty()){
         return res.status(400).json({errors:errors.array()});
     }
@@ -36,7 +39,9 @@ module.exports.registerCaptain=async(req,res,next)=>{
 }
 
 module.exports.loginCaptain=async(req,res,next)=>{
+    console.log("captain login req");
     const errors=validationResult(req);
+    console.log(errors);
     if(!errors.isEmpty()){
         return res.status(400).json({errors:errors.array()});
     }
@@ -69,7 +74,8 @@ module.exports.getCaptainProfile=async(req,res,next)=>{
 
 module.exports.logoutCaptain=async (req,res,next)=>{
     const token=req.cookies.token || req.headers.authorization?.split(" ")[1];
-
+    console.log("captain logout req, token=",token);
+    
     await blackListTokenModel.create({token});
 
     res.clearCookie("token");

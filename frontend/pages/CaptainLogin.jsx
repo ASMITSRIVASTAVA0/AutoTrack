@@ -1,14 +1,35 @@
 import React from 'react';
 import {useState} from "react";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
+import axios from "axios";
+import {CaptainDataContext} from "../context/CaptainContext";
+
+
 const CaptainLogin = () => {
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
-  const [captainData,setCaptainData]=useState("");
+  // const [captainData,setCaptainData]=useState("");
+  const {captain,setCaptain}=React.useContext(CaptainDataContext);
+  const navigate=useNavigate();
 
-  const submitHandler=(e)=>{
+  const submitHandler=async (e)=>{
     e.preventDefault();
-    console.log("heelo");
+    
+    const captain={
+      email:email,
+      password:password
+    };
+
+    const response=await axios.post(`${import.meta.env.VITE_BASE_URL}/captains/login`,captain);
+
+    if(response.status===200){
+      const data=response.data;
+
+      setCaptain(data.captain);
+      localStorage.setItem("token",data.token);
+      navigate("/captain-home");
+    }
+
   }
 
   return (
@@ -16,18 +37,18 @@ const CaptainLogin = () => {
       <div>
         <form onSubmit={(e)=>{
           e.preventDefault();
-          setCaptainData({
-            email:email,
-            password:password
-          })
-          console.log("captaindata="+captainData.email+" pass="+captainData.password);
+          // setCaptainData({
+          //   email:email,
+          //   password:password
+          // })
+          // console.log("captaindata="+captainData.email+" pass="+captainData.password);
           // console.log(email,password);
           submitHandler(e);
           setEmail("");
           setPassword("");
         }}>
           <h4 className='text-[#ff2d2d]'>AutoTrack</h4>
-          <h3 className="text-xl mb-2">Please Enter Your Email :</h3>
+          <h3 className="text-xl mb-2">Please Enter Captain's Email :</h3>
           <input
           value={email}
           onChange={(e)=>{
@@ -40,7 +61,7 @@ const CaptainLogin = () => {
           placeholder="email@example.com"
           className="bg-[#f2f2f2] mb-7 rounded px-4 py-2 border w-full text-lg placeholder:text-base"
           />
-          <h3 className="text-xl mb-2">Enter Password</h3>
+          <h3 className="text-xl mb-2">Enter Captain's Password</h3>
           <input 
           required 
           value={password}

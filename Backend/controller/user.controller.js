@@ -12,8 +12,12 @@ const blacklistTokenModel=require("../models/blacklistToken.model");
 
 // json({myerrors:errors.array()})=> myerrors is key name and errors.array() is all errors
 module.exports.registerUser=async (req,res,next)=>{
+    console.log("user signup request");
     const errors=validationResult(req);
     if(!errors.isEmpty()){
+        const errArray=errors.array();
+        console.log("validation errors: ",errArray);
+        // console.log("errors validation="+errors.array().json({errors:errors.array()}));
         return res.status(400).json({errors:errors.array()});
     }
 
