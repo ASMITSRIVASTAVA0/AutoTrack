@@ -1,4 +1,6 @@
 const captainModel=require("../models/captain.model");
+
+// to create captain obj
 const captainService=require("../services/captain.service");
 const {validationResult}=require("express-validator");
 const blackListTokenModel = require("../models/blacklistToken.model");
@@ -41,8 +43,9 @@ module.exports.registerCaptain=async(req,res,next)=>{
 module.exports.loginCaptain=async(req,res,next)=>{
     console.log("captain login req");
     const errors=validationResult(req);
-    console.log(errors);
+    
     if(!errors.isEmpty()){
+        console.log("erros=",errors);
         return res.status(400).json({errors:errors.array()});
     }
 
@@ -63,7 +66,8 @@ module.exports.loginCaptain=async(req,res,next)=>{
     const token=captain.generateAuthToken();
 
     res.cookie("token",token);
-
+    
+    console.log("captain token="+token);
     res.status(200).json({token,captain});
 
 }

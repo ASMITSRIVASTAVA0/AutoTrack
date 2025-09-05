@@ -26,6 +26,7 @@ const UserProtectWrapper=({children})=>{
 
     useEffect(()=>{
         if(!token){
+            console.log("token not found");
             navigate("/login");
         }
 

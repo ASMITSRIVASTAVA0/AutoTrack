@@ -1,5 +1,7 @@
 const userModel=require("../models/user.model");
 
+
+// to create user obj
 const userService=require("../services/user.service");
 
 
@@ -25,7 +27,10 @@ module.exports.registerUser=async (req,res,next)=>{
 
     const isUserAlreadyExists=await userModel.findOne({email});
     if(isUserAlreadyExists)
+    {
+        console.log("User with same email id already exists");
         return res.status(400).json({message:"User with same email id already exists"});
+    }
 
     const hashedPassword=await userModel.hashPassword(password);
 
@@ -38,6 +43,7 @@ module.exports.registerUser=async (req,res,next)=>{
 
     const token=user.generateAuthToken();
 
+    console.log("created successfully with token="+token);
     res.status(201).json({token,user});
 
 }
@@ -56,7 +62,10 @@ module.exports.logInUser=async(req,res,next)=>{
     const user=await userModel.findOne({email}).select("+password");
 
     if(!user)
-    return res.status(401).json({message:"Invalid Email or Password"});
+    {
+        
+        return res.status(401).json({message:"Invalid Email or Password"});
+    }
 
     // this method defined in (my) userSchema
     const isMatch=await user.comparePassword(password);
