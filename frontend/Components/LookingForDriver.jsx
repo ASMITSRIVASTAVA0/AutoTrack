@@ -12,7 +12,7 @@ const LookingForDriver=(props)=>{
             props.setVehicleFound(false)
             }}
             >
-            <i class="ri-arrow-down-s-line font-bold"></i>            
+            <i class="text-xl ri-arrow-down-s-line font-bold"></i>            
             </h5>
             <h3 className="text-2xl font-semibold mb-5" >Looking for Driver</h3>
             
@@ -71,7 +71,8 @@ const LookingForDriver=(props)=>{
                 <div
                 className=" mt-4 w-full bg-green-600 text-white font-semibold p-2 rounded-lg text-center"
                 onClick={()=>{
-                    props.setVehicleFound(true)
+                    // props.setVehicleFound(true)
+                    props.setWaitingForDriver(true)
                 }}
                 >
                     <button>Confirm</button>

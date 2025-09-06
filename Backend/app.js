@@ -23,7 +23,12 @@ const captainRoutes=require("./routes/captain.routes");
 
 connectToDb();
 
-app.use(cors());
+// app.use(cors());
+
+app.use(cors({
+  origin: "http://localhost:5173",  // your frontend URL
+  credentials: true
+}));
 
 app.use(cookieParser());
 

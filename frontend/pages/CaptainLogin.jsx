@@ -6,6 +6,7 @@ import {CaptainDataContext} from "../context/CaptainContext";
 
 
 const CaptainLogin = () => {
+  // console.log("captain login");
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
   // const [captainData,setCaptainData]=useState("");
@@ -14,22 +15,25 @@ const CaptainLogin = () => {
 
   const submitHandler=async (e)=>{
     e.preventDefault();
-    
+    console.log("email="+email+" pass="+password);
     const captain={
       email:email,
       password:password
     };
 
     const response=await axios.post(`${import.meta.env.VITE_BASE_URL}/captains/login`,captain);
-
+    console.log(response+" mystatus="+response.status);
     if(response.status===200){
       const data=response.data;
 
       setCaptain(data.captain);
       localStorage.setItem("token",data.token);
+      // console.log("token=",data.token);
       navigate("/captain-home");
     }
+    // console.log("response not come");
 
+   
   }
 
   return (

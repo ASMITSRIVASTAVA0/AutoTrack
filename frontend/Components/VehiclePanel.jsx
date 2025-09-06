@@ -11,7 +11,7 @@ const VehiclePanel=(props)=>{
             props.setConfirmRidePanel(false)
             }}
             >
-            <i class="ri-arrow-down-s-line font-bold"></i>            
+            <i class="text-xl ri-arrow-down-s-line font-bold"></i>            
             </h5>
             <h3 className="text-2xl font-semibold mb-5" >Choose a Vehicle</h3>
             <div
