@@ -14,6 +14,7 @@ import CaptainProtectWrapper from '../pages/CaptainProtectWrapper';
 import CaptainLogout from "../pages/CaptainLogout";
 
 import Riding from "../pages/Riding.jsx";
+import CaptainRiding from '../pages/CaptainRiding.jsx';
 
 const App = () => {
 
@@ -60,6 +61,11 @@ const App = () => {
         <Route
         path="/riding"
         element={<Riding/>}
+        />
+
+        <Route
+        path="/captain-riding"
+        element={<CaptainRiding/>}
         />
 
       </Routes>

@@ -4,7 +4,7 @@ import {Link} from "react-router-dom";
 const Start = () => {
   return (
     <div>
-      <div className="bg-no-repeat bg-center bg-cover bg-[url(../public/AutoTrackLogo.png)] h-screen pt-8 flex justify-between flex-col w-full ">
+      <div className="bg-no-repeat bg-center bg-cover bg-[url(/AutoTrackLogo.png)] h-screen pt-8 flex justify-between flex-col w-full ">
         <img className="w-16 ml-8" 
         // src="../src/assets/AutoTrackLogo.png"
         />

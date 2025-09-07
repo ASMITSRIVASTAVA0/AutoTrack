@@ -186,7 +186,7 @@ const Home = () => {
       </div>
 
       <div 
-      className="fixed w-full z-10 bottom-0 bg-yellow-200 px-3 py-6 pt-12 "
+      className="fixed w-full z-10 bottom-0 bg-yellow-200 px-3 py-6 pt-12 translate-y-full"
       ref={vehiclePanelRef}
       >
           <VehiclePanel
@@ -195,7 +195,7 @@ const Home = () => {
           />
       </div>
 
-      <div className="fixed w-full z-10 bottom-0  px-3 py-6 pt-12 bg-red-100 "
+      <div className="fixed w-full z-10 bottom-0  px-3 py-6 pt-12 bg-red-100 translate-y-full"
       ref={confirmRidePanelRef}
       >
           <ConfirmRide
@@ -205,7 +205,7 @@ const Home = () => {
           />
       </div>
 
-      <div className="fixed w-full z-10 bottom-0  px-3 py-6 pt-12 bg-blue-200 "
+      <div className="fixed w-full z-10 bottom-0  px-3 py-6 pt-12 bg-blue-200 translate-y-full"
       ref={vehicleFoundRef}
       >
           <LookingForDriver
@@ -215,7 +215,7 @@ const Home = () => {
           />
       </div>
 
-      <div className="fixed w-full z-10 bottom-0  px-3 py-6 pt-12 bg-green-200 "
+      <div className="translate-y-full fixed w-full z-10 bottom-0  px-3 py-6 pt-12 bg-green-200 "
       ref={waitingForDriverRef}
       >
           <WaitingForDriver
