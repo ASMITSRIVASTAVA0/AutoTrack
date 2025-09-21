@@ -1,20 +1,25 @@
 import React from "react";
-const RidePopUp=(props)=>{
+import { Link } from "react-router-dom";
+const FinishRide=(props)=>{
     return (
-        <div>
+        
+    
+            <div
+            // className="h-[100%] "
+            >
 
             <h5 
-            className="p-3 text-center w-[90%] absolute top-0  " 
+            className="p-3 text-center w-[90%] absolute  top-0  " 
             onClick={()=>{
             // props.setVehiclePanel(false)
             // props.setConfirmRidePanel(false)
             // props.setVehiclePanel(false)
-                props.setRidePopUpPanel(false)
+                props.setFinishRidePanel(false)
             }}
             >
             <i className="ri-arrow-down-s-line font-bold"></i>            
             </h5>
-            <h3 className="text-2xl font-semibold " >New Ride Available!</h3>
+            <h3 className="text-2xl font-semibold " >Finish this Ride</h3>
             <div className="p-3 bg-gray-100 rounded-lg flex items-center justify-between mt-3">
                 <div className="flex items-center gap-3">
                     <img className="h-14 w-14 rounded-full object-cover" src="/driverpic.jpg" />
@@ -73,30 +78,34 @@ const RidePopUp=(props)=>{
                     </div>
                 </div>
 
-                <div
-                className="p-2 flex w-full items-center justify-between"
+                <div 
+                className="mt-6 w-full"
                 >
-                    <button
-                    onClick={()=>{
-                        props.setRidePopUpPanel(false)
-                    }}
-                    className=" mt-2 w-2/5 bg-gray-300 text-gray-900 font-semibold p-2 rounded-lg text-center"
-                
-                    >Ignore</button>
-                    <button
-                    className=" ml-3 mt-2 w-2/5 bg-green-600 text-white font-semibold p-2 rounded-lg text-center"
-                    onClick={()=>{
-                        props.setConfirmRidePopUpPanel(true)
-                    }}
-                    >Accept</button>
                     
+                        
+
+                        <Link
+                        to="/captain-home"
+                        className=" w-full mt-5 flex justify-center bg-green-600 text-lg text-white font-semibold p-3 rounded-lg" 
+                        >
+                            
+                            Finish Ride
+                    
+                        </Link>
+                        {/* <p
+                        className="mt-10 text-xs"
+                        >Click on Finish Ride button if you have completed the payment</p>
+ */}
+
+
+
                 </div>
                 
-            
+        
             </div>
 
         </div>
     )
 };
 
-export default RidePopUp;
+export default FinishRide;

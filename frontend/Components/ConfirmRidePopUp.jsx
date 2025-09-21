@@ -1,10 +1,17 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Form, Link } from 'react-router-dom'
+import {useState} from "react";
 
 const ConfirmRidePopUp = (props) => {
+
+    const [otp,setOtp]=useState("");
+
+    const submitHandler=(e)=>{
+        e.preventDefault();
+    }
   return (
     
-            <div
+        <div
             // className="h-[100%] "
             >
 
@@ -17,7 +24,7 @@ const ConfirmRidePopUp = (props) => {
                 props.setConfirmRidePopUpPanel(false)
             }}
             >
-            <i class="ri-arrow-down-s-line font-bold"></i>            
+            <i className="ri-arrow-down-s-line font-bold"></i>            
             </h5>
             <h3 className="text-2xl font-semibold " >Confirm this ride to start!</h3>
             <div className="p-3 bg-gray-100 rounded-lg flex items-center justify-between mt-3">
@@ -78,26 +85,48 @@ const ConfirmRidePopUp = (props) => {
                     </div>
                 </div>
 
-                <Link
-                to="/captain-riding"
-                className=" mt-4 w-full bg-green-600 text-white font-semibold p-3 rounded-lg text-center"
-                onClick={()=>{
-
-                }}
+                <div 
+                className="mt-6 w-full"
                 >
-                    <button>Confirm</button>
-                </Link>
+                    <form
+                    onClick={(e)=>{
+                        submitHandler(e)
+                    }}
+                    >
+                        <input 
+                        type="text"
+                        placeholder="Enter OTP"
+                        className="bg-[#eee] px-6 py-4 font-mono text-lg rounded-lg w-full mt-2 "
+                        value={otp}
+                        onChange={()=>{
+                            setOtp(e.target.value)
+                        }}
+                        />
 
-                <div
-                className=" mt-1 w-full bg-red-500 text-white font-semibold p-3 rounded-lg text-center"
-                onClick={()=>{
-                    props.setConfirmRidePopUpPanel(false)
-                    props.setRidePopUpPanel(false)
-                }}
-                >
-                    <button>Cancel</button>
+                        <Link
+                        to="/captain-riding"
+                        className=" w-full mt-5 flex justify-center bg-green-600 text-white font-semibold p-3 rounded-lg" 
+                        >
+                            
+                            Confirm
+                    
+                        </Link>
+
+
+                        <div
+                        className=" mt-1 w-full bg-red-500 text-white text-lg font-semibold p-3 rounded-lg text-center"
+                        onClick={()=>{
+                            props.setConfirmRidePopUpPanel(false)
+                            props.setRidePopUpPanel(false)
+                        }}
+                        >
+                            <button>Cancel</button>
+                        </div>
+                    </form>
+                    
                 </div>
-            
+                
+        
             </div>
 
         </div>

@@ -16,7 +16,5 @@ createRoot(document.getElementById('root')).render(
         </BrowserRouter>
       </UserContext>
     </CaptainContext>
-    
-    
   </StrictMode>,
 )
