@@ -12,7 +12,27 @@ const rideRoutes = require('./routes/ride.routes');
 
 connectToDb();
 
+/*
 app.use(cors());
+*/
+const corsOptions = {
+  origin: [
+    // 'http://localhost:3000',
+    'http://localhost:4000',
+    'http://localhost:5173',
+    'https://autotrack-frontend.vercel.app', // Your future Vercel URL
+    'https://*.vercel.app' // Allow all Vercel deployments
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+};
+
+app.use(cors(corsOptions));
+
+app.options('*', cors(corsOptions));
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
