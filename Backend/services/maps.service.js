@@ -28,19 +28,90 @@ module.exports.getAddressCoordinate = async (address) => {
     }
 }
 
+// module.exports.getDistanceTime = async (origin, destination) => {
+//     if (!origin || !destination) {
+//         throw new Error('Origin and destination are required');
+//     }
+//     console.log("=== getDistanceTime called ===");
+//     console.log("Origin coords received:", origin);
+//     console.log("Destination coords received:", destination);
+//     console.log("Origin type:", typeof origin, "Keys:", Object.keys(origin));
+//     console.log("Destination type:", typeof destination, "Keys:", Object.keys(destination));
+
+
+//     const apiKey = process.env.OPENROUTE_SERVICE_API_KEY;
+//     console.log("api key",apiKey.trim());
+//     if (!apiKey) {
+//         throw new Error('OpenRouteService API key is missing');
+//     }
+
+//     try {
+//         // Validate coordinates
+//         if (typeof origin.lat === 'undefined' || typeof origin.lng === 'undefined' ||
+//             typeof destination.lat === 'undefined' || typeof destination.lng === 'undefined') {
+//             throw new Error('Invalid coordinates format');
+//         }
+
+//         const originCoords = [parseFloat(origin.lng), parseFloat(origin.lat)];//same as input origin
+//         const destinationCoords = [parseFloat(destination.lng), parseFloat(destination.lat)];
+
+//         console.log("API Key present:", !!apiKey);
+//         console.log("Origin coords:", originCoords);
+//         console.log("Destination coords:", destinationCoords);
+
+//         const directionsUrl = 'https://api.openrouteservice.org/v2/directions/driving-car';
+        
+//         const requestBody = {
+//             coordinates: [originCoords, destinationCoords],
+//             instructions: false,
+//             format: 'json'
+//         };
+
+//         console.log("Request body:", JSON.stringify(requestBody, null, 2));
+
+//         const response = await axios.post(directionsUrl, requestBody, {
+//             headers: {
+//                 'Authorization': apiKey.trim(),
+//                 'Content-Type': 'application/json',
+//                 'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8'
+//             },
+//             timeout: 10000 
+//             // 10 second timeout
+//         });
+
+//         console.log("Response status:", response.status);
+        
+//         if (!response.data.routes || response.data.routes.length === 0) {
+//             throw new Error('No route found between the specified locations');
+//         }
+
+//         const distance = response.data.routes[0].summary.distance;
+//         const duration = response.data.routes[0].summary.duration;
+        
+//         return {
+//             distance: { value: distance },
+//             duration: { value: duration }
+//         };
+
+//     } catch (err) {
+//         console.error('Full error details:', {
+//             message: err.message,
+//             response: err.response?.data,
+//             status: err.response?.status,
+//             headers: err.response?.headers
+//         });
+        
+//         throw new Error('Unable to fetch distance and time: ' + (err.response?.data?.error?.message || err.message));
+//     }
+// }
+
 module.exports.getDistanceTime = async (origin, destination) => {
     if (!origin || !destination) {
         throw new Error('Origin and destination are required');
     }
-    console.log("=== getDistanceTime called ===");
-    console.log("Origin coords received:", origin);
-    console.log("Destination coords received:", destination);
-    console.log("Origin type:", typeof origin, "Keys:", Object.keys(origin));
-    console.log("Destination type:", typeof destination, "Keys:", Object.keys(destination));
-
 
     const apiKey = process.env.OPENROUTE_SERVICE_API_KEY;
-    console.log("api key",apiKey.trim());
+    
     if (!apiKey) {
         throw new Error('OpenRouteService API key is missing');
     }
@@ -52,14 +123,13 @@ module.exports.getDistanceTime = async (origin, destination) => {
             throw new Error('Invalid coordinates format');
         }
 
-        const originCoords = [parseFloat(origin.lng), parseFloat(origin.lat)];//same as input origin
+        const originCoords = [parseFloat(origin.lng), parseFloat(origin.lat)];
         const destinationCoords = [parseFloat(destination.lng), parseFloat(destination.lat)];
 
         console.log("API Key present:", !!apiKey);
-        console.log("Origin coords:", originCoords);
-        console.log("Destination coords:", destinationCoords);
 
-        const directionsUrl = 'https://api.openrouteservice.org/v2/directions/driving-car';
+        // Use API key as query parameter instead of header
+        const directionsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${encodeURIComponent(apiKey)}`;
         
         const requestBody = {
             coordinates: [originCoords, destinationCoords],
@@ -67,16 +137,15 @@ module.exports.getDistanceTime = async (origin, destination) => {
             format: 'json'
         };
 
+        console.log("Request URL (without key):", 'https://api.openrouteservice.org/v2/directions/driving-car?api_key=***');
         console.log("Request body:", JSON.stringify(requestBody, null, 2));
 
         const response = await axios.post(directionsUrl, requestBody, {
             headers: {
-                'Authorization': apiKey.trim(),
                 'Content-Type': 'application/json',
                 'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8'
             },
-            timeout: 10000 
-            // 10 second timeout
+            timeout: 10000
         });
 
         console.log("Response status:", response.status);
@@ -98,8 +167,11 @@ module.exports.getDistanceTime = async (origin, destination) => {
             message: err.message,
             response: err.response?.data,
             status: err.response?.status,
-            headers: err.response?.headers
         });
+        
+        if (err.response?.status === 403) {
+            throw new Error('OpenRouteService blocked request from Render. The service may be blocking cloud deployment IPs.');
+        }
         
         throw new Error('Unable to fetch distance and time: ' + (err.response?.data?.error?.message || err.message));
     }
