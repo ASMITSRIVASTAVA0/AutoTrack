@@ -8,14 +8,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    // Add this for SPA
-    rollupOptions: {
-      input: {
-        main: './index.html'
-      }
-    }
+    sourcemap: false
   },
-  // Important for SPA routing
-  base: './',
+  // Add this for Netlify
+  base: './'
 })

@@ -12,16 +12,18 @@ module.exports.authUser = async (req, res, next) => {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 
-
+    console.log("finding blacklisted token at auth.middleware.js");
     const isBlacklisted = await blackListTokenModel.findOne({ token: token });
-
+    console.log("isBlacklisted: ", isBlacklisted);
     if (isBlacklisted) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 
     try {
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+        // const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, "user-video-secret");
+        
         const user = await userModel.findById(decoded._id)
 
         req.user = user;
@@ -76,7 +78,9 @@ module.exports.authCaptain = async (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, "user-video-secret");
+        
         const captain = await captainModel.findById(decoded._id);
         req.captain = captain;
         return next();
