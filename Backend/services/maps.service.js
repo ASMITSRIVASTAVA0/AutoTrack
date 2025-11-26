@@ -27,6 +27,7 @@ module.exports.getAddressCoordinate = async (address) => {
         throw new Error('Unable to fetch coordinates: ' + error.message);
     }
 }
+
 module.exports.getDistanceTime = async (origin, destination) => {
     if (!origin || !destination) {
         throw new Error('Origin and destination are required');
@@ -39,7 +40,7 @@ module.exports.getDistanceTime = async (origin, destination) => {
 
 
     const apiKey = process.env.OPENROUTE_SERVICE_API_KEY;
-    
+    console.log("api key",apiKey);
     if (!apiKey) {
         throw new Error('OpenRouteService API key is missing');
     }
