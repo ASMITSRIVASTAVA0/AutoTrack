@@ -40,7 +40,7 @@ module.exports.getDistanceTime = async (origin, destination) => {
 
 
     const apiKey = process.env.OPENROUTE_SERVICE_API_KEY;
-    console.log("api key",apiKey);
+    console.log("api key",apiKey.trim());
     if (!apiKey) {
         throw new Error('OpenRouteService API key is missing');
     }
@@ -71,7 +71,7 @@ module.exports.getDistanceTime = async (origin, destination) => {
 
         const response = await axios.post(directionsUrl, requestBody, {
             headers: {
-                'Authorization': apiKey,
+                'Authorization': apiKey.trim(),
                 'Content-Type': 'application/json',
                 'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8'
             },
