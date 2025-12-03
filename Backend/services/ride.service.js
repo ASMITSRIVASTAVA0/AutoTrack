@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 async function getFare(pickup, destination) {
-
+    console.log("getFare at ride.service.js called with pickup:", pickup, "destination:", destination);    
     if (!pickup || !destination) {
         throw new Error('Pickup and destination are required');
     }
@@ -12,24 +12,22 @@ async function getFare(pickup, destination) {
     const distanceTime = await mapService.getDistanceTime(pickup, destination);
     
     const baseFare = {
-        auto: 30,
-        car: 50,
-        moto: 20
+        auto: 3,
+        car: 5,
+        moto: 2
     };
 
     const perKmRate = {
-        auto: 10,
-        car: 15,
-        moto: 8
+        auto: 2,
+        car: 3,
+        moto: 1
     };
 
     const perMinuteRate = {
-        auto: 2,
-        car: 3,
-        moto: 1.5
+        auto: 1.5,
+        car: 2,
+        moto: 1
     };
-
-
 
     const fare = {
         auto: Math.round(baseFare.auto + ((distanceTime.distance.value / 1000) * perKmRate.auto) + ((distanceTime.duration.value / 60) * perMinuteRate.auto)),
@@ -38,8 +36,6 @@ async function getFare(pickup, destination) {
     };
 
     return fare;
-
-
 }
 
 module.exports.getFare = getFare;
@@ -58,7 +54,7 @@ module.exports.createRide = async ({
 }) => {
     try {
         if (!user || !pickup || !destination || !vehicleType) {
-            throw new Error('All fields are required');
+            throw new Error('All fields are required at ride.service.js');
         }
 
         // Validate that we have both address and coordinates
@@ -72,6 +68,7 @@ module.exports.createRide = async ({
 
         const fare = await getFare(pickup, destination);
         console.log('Calculated fare:', fare);  
+
         const ride = await rideModel.create({
             user,
             pickup: {
@@ -139,7 +136,9 @@ module.exports.startRide = async ({ rideId, otp, captain }) => {
 
     const ride = await rideModel.findOne({
         _id: rideId
-    }).populate('user').populate('captain').select('+otp');
+    }).populate('user')
+    .populate('captain')
+    .select('+otp');
 
     if (!ride) {
         throw new Error('Ride not found at ride.service.js');
@@ -179,7 +178,7 @@ module.exports.endRide = async ({ rideId, captain }) => {
     }
 
     if (ride.status !== 'ongoing') {
-        throw new Error('Ride not ongoing');
+        throw new Error('Ride not ongoing/started');
     }
 
     await rideModel.findOneAndUpdate({

@@ -1,0 +1,9 @@
+token name diff for each role
+child can have only one par, so out of all par req, user can accept req only of one, but par can have many childs
+chat room creation for par,captain,user
+logout route not working currently
+ml to decide rating of driver based on comment
+ml to get dist between src and dest
+GEOAPIFY_API_KEY didnot give res even once
+
+token save in cookies as "user-token", "par-token", "cap-token" so to have all in single browser

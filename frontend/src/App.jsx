@@ -1,25 +1,34 @@
 import React, { useContext } from 'react'
 import { Route, Routes } from 'react-router-dom'
-import Start from './pages/Start'
-import UserLogin from './pages/UserLogin'
-import UserSignup from './pages/UserSignup'
-import Captainlogin from './pages/Captainlogin'
-import CaptainSignup from './pages/CaptainSignup'
-import Home from './pages/Home'
-import UserProtectWrapper from './pages/UserProtectWrapper'
-import UserLogout from './pages/UserLogout'
-import CaptainHome from './pages/CaptainHome'
-import CaptainProtectWrapper from './pages/CaptainProtectWrapper'
-import CaptainLogout from './pages/CaptainLogout'
-import Riding from './pages/Riding'
-import CaptainRiding from './pages/CaptainRiding'
+import Start from './pages.startup/Start'
+import UserLogin from './pages.login/UserLogin'
+import UserSignup from './pages.signup/UserSignup'
+import Captainlogin from './pages.login/Captainlogin'
+import CaptainSignup from './pages.signup/CaptainSignup'
+import Home from './pages.home/Home'
+import UserProtectWrapper from './pages.protectwrapper/UserProtectWrapper'
+import UserLogout from './pages.logout/UserLogout'
+import CaptainHome from './pages.home/CaptainHome'
+import CaptainProtectWrapper from './pages.protectwrapper/CaptainProtectWrapper'
+import CaptainLogout from './pages.logout/CaptainLogout'
+import Riding from './pages.riding/Riding'
+import CaptainRiding from './pages.riding/CaptainRiding'
 import 'remixicon/fonts/remixicon.css'
+import Role from './pages.startup/Role';
 
+import ParentLogin from './pages.login/ParentLogin'
+import ParentSignup from './pages.signup/ParentSignup'
+import ParentProtectWrapper from './pages.protectwrapper/ParentProtectWrapper'
+import ParentHome from './pages.home/ParentHome';
+import ParentLogout from './pages.logout/ParentLogout';
 const App = () => {
 
   return (
     <div>
       <Routes>
+        <Route path='/' element={<Start />} />
+        <Route path='/role' element={<Role />} />
+        
         {/* Routes=container that render first matching route */}
         
         {/* Route=define path and what component to render */}
@@ -31,27 +40,34 @@ const App = () => {
           </UserProtectWrapper>
         } 
         />
-
-{/* authenticated routes */}
         <Route path='/captain-home' element={
           <CaptainProtectWrapper>
             <CaptainHome />
           </CaptainProtectWrapper>
 
         } />
+        <Route path="/parent-home" element={
+          <ParentProtectWrapper>
+            <ParentHome />
+          </ParentProtectWrapper>
+        }
+        />
 
         <Route path='/riding' element={<Riding />} />
         <Route path='/captain-riding' element={<CaptainRiding />} />
 
 
+        
 
-{/* public routes */}
-        <Route path='/' element={<Start />} />
         <Route path='/login' element={<UserLogin />} />
         <Route path='/captain-login' element={<Captainlogin />} />
+        <Route path='/parent-login' element={<ParentLogin />} />
+  
         
         <Route path='/signup' element={<UserSignup />} />
         <Route path='/captain-signup' element={<CaptainSignup />} />
+        <Route path='/parent-signup' element={<ParentSignup />} />
+  
 
         <Route path='/user/logout'
           element={<UserProtectWrapper>
@@ -63,6 +79,12 @@ const App = () => {
             <CaptainLogout />
           </CaptainProtectWrapper>
         } />
+        <Route path='/parent/logout' element={
+          <ParentProtectWrapper>
+            <ParentLogout />
+          </ParentProtectWrapper>
+        } />
+
       </Routes>
     </div>
   )

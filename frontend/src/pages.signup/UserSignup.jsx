@@ -1,0 +1,163 @@
+import React, { useState, useContext } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import axios from 'axios'
+import { UserDataContext } from '../context/UserContext'
+
+const UserSignup = () => {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const navigate = useNavigate()
+  const { user, setUser } = useContext(UserDataContext)
+
+  const submitHandler = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    const newUser = {
+      fullname: {
+        firstname: firstName,
+        lastname: lastName
+      },
+      email: email,
+      password: password
+    }
+
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/users/register`, newUser)
+
+      if (response.status === 201) {
+        const data = response.data
+        setUser(data.user)
+        localStorage.setItem('token', data.token)
+        // =============
+        localStorage.setItem('user', JSON.stringify(data.user))  // Save user to localStorage
+        
+        navigate('/home')
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Signup failed. Please try again.')
+      console.error('Signup request failed', err)
+    } finally {
+      setLoading(false)
+    }
+
+    setEmail('')
+    setFirstName('')
+    setLastName('')
+    setPassword('')
+  }
+
+  return (
+    <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-between p-6'>
+      <div className='max-w-md mx-auto w-full'>
+        {/* Logo */}
+        <div className='mb-8'>
+          <img className='w-14 h-14 object-contain' src="/autotracklogo.png" alt="AutoTrack Logo" />
+        </div>
+
+        {/* Header */}
+        <div className='mb-8'>
+          <h1 className='text-3xl font-bold text-gray-900 mb-2'>Create Account</h1>
+          <p className='text-gray-600'>Join AutoTrack as a Passenger</p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className='mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg'>
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={submitHandler} className='space-y-5'>
+          {/* Name Fields */}
+          <div>
+            <label className='block text-sm font-semibold text-gray-700 mb-2'>Full Name</label>
+            <div className='flex gap-3'>
+              <input
+                required
+                className='flex-1 bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-colors'
+                type="text"
+                placeholder='First name'
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+              <input
+                className='flex-1 bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-colors'
+                type="text"
+                placeholder='Last name'
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Email Field */}
+          <div>
+            <label className='block text-sm font-semibold text-gray-700 mb-2'>Email Address</label>
+            <input
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className='w-full bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-colors'
+              type="email"
+              placeholder='your.email@example.com'
+            />
+          </div>
+
+          {/* Password Field */}
+          <div>
+            <label className='block text-sm font-semibold text-gray-700 mb-2'>Password</label>
+            <input
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className='w-full bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:border-blue-500 transition-colors'
+              type="password"
+              placeholder='At least 6 characters'
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button
+            disabled={loading}
+            type='submit'
+            className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-6'
+          >
+            {loading ? 'Creating Account...' : 'Create Account'}
+          </button>
+        </form>
+
+        {/* Login Link */}
+        <p className='text-center text-gray-600 mt-6'>
+          Already have an account?{' '}
+          <Link to='/login' className='text-blue-600 font-semibold hover:text-blue-700'>
+            Login here
+          </Link>
+        </p>
+
+        {/* Back to Role Selection */}
+        <p className='text-center text-gray-600 mt-4'>
+          <Link to='/role' className='text-gray-600 hover:text-gray-800 underline text-sm'>
+            ← Back to role selection
+          </Link>
+        </p>
+      </div>
+
+      {/* Footer */}
+      <div className='max-w-md mx-auto w-full text-center'>
+        <p className='text-xs text-gray-500 leading-tight'>
+          This site is protected by reCAPTCHA and the <span className='underline'>Google Privacy Policy</span> and <span className='underline'>Terms of Service</span> apply.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default UserSignup

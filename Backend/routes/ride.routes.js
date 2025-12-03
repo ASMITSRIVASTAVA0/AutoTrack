@@ -7,9 +7,6 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 router.post('/create',
     authMiddleware.authUser,
-    // body('pickup').isString().isLength({ min: 3 }).withMessage('Invalid pickup address'),
-    // body('destination').isString().isLength({ min: 3 }).withMessage('Invalid destination address'),
-    // body('vehicleType').isString().isIn([ 'auto', 'car', 'moto' ]).withMessage('Invalid vehicle type'),
     body('pickup').isObject().withMessage('Pickup must be an object'),
     body('pickup.address').isString().isLength({ min: 3 }).withMessage('Invalid pickup address'),
     body('destination').isObject().withMessage('Destination must be an object'),
