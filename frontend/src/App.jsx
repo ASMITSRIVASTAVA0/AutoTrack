@@ -21,6 +21,14 @@ import ParentSignup from './pages.signup/ParentSignup'
 import ParentProtectWrapper from './pages.protectwrapper/ParentProtectWrapper'
 import ParentHome from './pages.home/ParentHome';
 import ParentLogout from './pages.logout/ParentLogout';
+import TermsOfService from './pages.startup/TermsOfService'
+import PrivaryPolicy from './pages.startup/PrivaryPolicy'
+
+import CaptainProfile from "./components/compo.captain/CaptainProfile";
+import Earnings from "./components/compo.captain/Earnings";
+import RideHistory from "./components/compo.captain/RideHistory";
+import Support from "./components/compo.captain/Support";
+
 const App = () => {
 
   return (
@@ -28,7 +36,8 @@ const App = () => {
       <Routes>
         <Route path='/' element={<Start />} />
         <Route path='/role' element={<Role />} />
-        
+        <Route path="/termsofservice" element={<TermsOfService/>}/>
+        <Route path="/privacypolicy" element={<PrivaryPolicy/>}/>
         {/* Routes=container that render first matching route */}
         
         {/* Route=define path and what component to render */}
@@ -40,12 +49,24 @@ const App = () => {
           </UserProtectWrapper>
         } 
         />
-        <Route path='/captain-home' element={
+        {/* <Route path='/captain-home' element={
           <CaptainProtectWrapper>
             <CaptainHome />
           </CaptainProtectWrapper>
 
-        } />
+        } /> */}
+
+        <Route path="/captain-home" element={
+          <CaptainProtectWrapper>
+            <CaptainHome />
+          </CaptainProtectWrapper>
+        }>
+          <Route path="profile" element={<CaptainProfile />} />
+          <Route path="history" element={<RideHistory />} />
+          <Route path="earnings" element={<Earnings />} />
+          <Route path="support" element={<Support />} />
+        </Route>
+
         <Route path="/parent-home" element={
           <ParentProtectWrapper>
             <ParentHome />

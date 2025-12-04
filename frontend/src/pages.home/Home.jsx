@@ -30,13 +30,9 @@ const Home = () => {
     const [vehicleFound, setVehicleFound] = useState(false);
     const [waitingForDriver, setWaitingForDriver] = useState(false);
     
-    const [pickupSuggestions, setPickupSuggestions] = useState([]);
-    const [destinationSuggestions, setDestinationSuggestions] = useState([]);
     const [activeField, setActiveField] = useState(null);
     
     const [fare, setFare] = useState({});
-    const [traveltime, setTraveltime] = useState(null);
-    const [duration, setDuration] = useState(null);
     
     const [vehicleType, setVehicleType] = useState(null);
     const [ride, setRide] = useState(null);
@@ -142,7 +138,7 @@ const Home = () => {
             setIsLoadingRequests(true);
             const token = localStorage.getItem('token');
             const response = await axios.get(
-                `${import.meta.env.VITE_BASE_URL}/user-parent/pending-parent-requests`,
+                `${import.meta.env.VITE_BASE_URL}/user-parents/pending-parent-requests`,
                 {
                     headers: { Authorization: `Bearer ${token}` },
                     timeout: 10000
@@ -614,17 +610,7 @@ const Home = () => {
                     </div>
                 </div>
 
-                {/* Expandable Panel */}
-                <div ref={panelRef} className='bg-white h-0 overflow-hidden rounded-t-3xl'>
-                    <LocationSearchPanel
-                        suggestions={activeField === 'pickup' ? pickupSuggestions : destinationSuggestions}
-                        setPanelOpen={setPanelOpen}
-                        setVehiclePanel={setVehiclePanel}
-                        setPickup={setPickup}
-                        setDestination={setDestination}
-                        activeField={activeField}
-                    />
-                </div>
+              
             </div>
 
             {/* Overlay Panels */}

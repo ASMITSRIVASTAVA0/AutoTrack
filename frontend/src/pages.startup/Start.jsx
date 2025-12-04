@@ -1,11 +1,17 @@
 
 
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+
+import { useNavigate } from 'react-router-dom';
+//useNavigate() is hook to navigate
+// navigate(-1) go back, navigate(1) go forward
+// ,navigate("/login",{replace:true})//no back button history
+// ,navigate("/profile",{state:{userid:10}})//navigate with state(send data)
+
 
 const Start = () => {
   const navigate = useNavigate()
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false)//useState add state to functional comp,return arr with curr state and setter func, re-render when state changes
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   
   useEffect(() => {
@@ -62,6 +68,8 @@ const Start = () => {
 
       {/* Floating particles */}
       <div className='absolute inset-0 z-10'>
+
+        {/* ...=> spread oper, used to expand arr, obj, iterable into individual elem, let copy, merge, expand structures */}
         {[...Array(30)].map((_, i) => (
           <div
             key={i}
@@ -187,9 +195,19 @@ const Start = () => {
               {/* Footer text */}
               <p className='text-center text-xs sm:text-sm text-zinc-500 mt-6 leading-relaxed'>
                 By continuing, you agree to our{' '}
-                <span className='text-zinc-400 underline hover:text-white transition-colors cursor-pointer'>Terms of Service</span>
+                <span 
+                className='text-zinc-400 underline hover:text-white transition-colors cursor-pointer'
+                onClick={()=>{
+                  navigate("/termsofservice");
+                }}
+                >Terms of Service</span>
                 {' '}and{' '}
-                <span className='text-zinc-400 underline hover:text-white transition-colors cursor-pointer'>Privacy Policy</span>
+                <span 
+                className='text-zinc-400 underline hover:text-white transition-colors cursor-pointer'
+                onClick={()=>{
+                  navigate("/privacypolicy")
+                }}
+                >Privacy Policy</span>
               </p>
             </div>
           </div>
@@ -202,3 +220,51 @@ const Start = () => {
 }
 
 export default Start
+
+
+
+// react comp using function instead of class
+// const Start=()=>{...}==>can use hooks to manage state and side effects
+// hooks are func that allow functional comp(no need of class comp) to use state, methods, contexts, refs,etc
+// hooks e.g. 
+// useState() manage state(independent), 
+// useReducer() manage state(complex, depend on prev state, state has multi sub values)
+// useEffect() runs side-effects like fetching data, timers, event listeners, 
+// useContext() access global data without props drilling,
+// useRef() access DOM elem, 
+// useMemo(()=>heavyfunc(num),[num]) memoize expensive calc
+// useCallback memoize func to avoid re-render, const handleclick=useCallback(()=>{...},[])
+// class Components extends React.Components, use "this" to access, complex than functional component
+
+// start.jsx==> jsx=javascript xml(extensible markup language)
+// syntax extension for js to describe ui in react comp, put js expression inside {},
+// attribute become props, class=>className, for=>htmlFor,eventHandler are camelcase=onClick,onChange
+// fragments <> <h1><p><i>  </> let return multi top-level elem without extra DOM node
+// Array.map() for lists: {items.map(i=><li>hello</li>)}
+// jsx=>react(frontend), client side render, {}, virtual DOM elem output
+// ejs=>node.js(backend), server-side render, <%= %>, plain HTML
+
+// props==. properties, READ-only inputs passed from par to child comp,while STATE are mutable
+/*
+function App(){
+  return <Greeting name="asmit"/>
+}
+function Greeting(props){
+  return <h1>{props.name}</h1>
+}
+*/
+
+// arrow func lexically binds this context
+// arrow func doNOT hve own this, they inherit this from par scope, called lexical scoping
+// function(){}, this depends on how func is called
+// ()=>{}, this depends on where func is written(lexical environment)
+
+
+// relative==space it originally occupy remains reserved, move relative to original position
+// absolute==relative to nearest positioned ancestor
+// fixed=====relative to viewport(browser window)
+
+// display=>flex(1d layout row or col), support justify-content, align-items, gap
+// grid(2d layout row and col), support grid-template-columns, grid-template-rows, gap
+// inline-flex(flex container that behave like inline(no next line force) text), 
+// block(default display type for <div>, occupies full width of par,force new line before and after)

@@ -7,3 +7,4 @@ ml to get dist between src and dest
 GEOAPIFY_API_KEY didnot give res even once
 
 token save in cookies as "user-token", "par-token", "cap-token" so to have all in single browser
+check if possible the driver gets verified by car no.(up77xxxx)

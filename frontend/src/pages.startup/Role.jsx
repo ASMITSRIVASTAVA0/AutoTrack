@@ -141,6 +141,7 @@ const Role = () => {
   const handleBackClick = () => {
     console.log('Navigating back to home...')
     // Navigation logic: navigate to '/'
+    navigate("/");
   }
 
   const parallaxStyle = {
@@ -221,7 +222,7 @@ const Role = () => {
             </div>
             <span className='text-white font-bold text-xl tracking-tight'>AutoTrack</span>
           </div> */}
-          <div className='group inline-flex items-center gap-3 bg-gradient-to-r from-zinc-900/80 to-zinc-800/80 backdrop-blur-xl px-5 py-3 rounded-2xl border border-zinc-700/50 shadow-2xl hover:shadow-red-500/20 transition-all duration-500 hover:scale-105 hover:-translate-y-1 cursor-pointer'>
+          {/* <div className='group inline-flex items-center gap-3 bg-gradient-to-r from-zinc-900/80 to-zinc-800/80 backdrop-blur-xl px-5 py-3 rounded-2xl border border-zinc-700/50 shadow-2xl hover:shadow-red-500/20 transition-all duration-500 hover:scale-105 hover:-translate-y-1 cursor-pointer'>
             <div className='relative w-11 h-11 bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-red-500/60 transition-all duration-500 group-hover:rotate-12 group-hover:scale-110'>
               <div className='absolute inset-0 bg-gradient-to-br from-red-400 to-orange-400 rounded-xl blur opacity-50 group-hover:opacity-100 transition-opacity duration-500'></div>
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className='relative w-6 h-6 text-white'>
@@ -232,7 +233,7 @@ const Role = () => {
             <div className='ml-2 px-2 py-1 bg-red-500/20 rounded-lg border border-red-500/30'>
               <span className='text-red-400 text-xs font-semibold'>FREE</span>
             </div>
-          </div>
+          </div> */}
           <h1 className='text-4xl sm:text-4xl md:text-5xl font-bold text-white mb-3 leading-tight'>
             
             <span className='block bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent mt-1 animate-pulse'>
