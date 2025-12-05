@@ -1,76 +1,4 @@
 
-// import React, { useEffect, useState } from 'react'
-// import L from 'leaflet'
-// import 'leaflet/dist/leaflet.css'
-
-// const LiveTracking = ({ captainLocation }) => {
-//   const mapRef = React.useRef(null)
-//   const mapInstance = React.useRef(null)
-//   const markerRef = React.useRef(null)
-
-//   useEffect(() => {
-//     // Initialize map
-//     if (!mapInstance.current) {
-//       mapInstance.current = L.map(mapRef.current).setView(
-//         [captainLocation?.lat || 28.6139, captainLocation?.lng || 77.2090],
-//         15
-//       )
-
-//       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-//         attribution: '&copy; OpenStreetMap contributors',
-//         maxZoom: 19,
-//       }).addTo(mapInstance.current)
-//     }
-
-//     // Update marker
-//     if (captainLocation) {
-//       if (markerRef.current) {
-//         markerRef.current.setLatLng([captainLocation.lat, captainLocation.lng])
-//       } else {
-//         // Create custom icon
-//         const captainIcon = L.divIcon({
-//           html: `
-//             <div class='relative flex items-center justify-center'>
-//               <div class='absolute w-10 h-10 bg-blue-400 rounded-full opacity-30 animate-ping'></div>
-//               <div class='w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-lg'>
-//                 <svg class='w-5 h-5 text-white' fill='currentColor' viewBox='0 0 24 24'>
-//                   <path d='M12 2C7.58 2 4 5.58 4 10c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z'/>
-//                 </svg>
-//               </div>
-//             </div>
-//           `,
-//           className: '',
-//           iconSize: [32, 32],
-//           iconAnchor: [16, 16],
-//         })
-
-//         markerRef.current = L.marker(
-//           [captainLocation.lat, captainLocation.lng],
-//           { icon: captainIcon }
-//         )
-//           .bindPopup('<b>Your Location</b>')
-//           .addTo(mapInstance.current)
-//       }
-
-//       mapInstance.current.setView([captainLocation.lat, captainLocation.lng], 15)
-//     }
-
-//     return () => {
-//       // Cleanup on unmount if needed
-//     }
-//   }, [captainLocation])
-
-//   return (
-//     <div 
-//       ref={mapRef} 
-//       className='w-full h-full rounded-lg'
-//       style={{ zIndex: 10 }}
-//     ></div>
-//   )
-// }
-
-// export default LiveTracking
-
 
 import React, { useEffect, useState, useRef } from 'react'
 import L from 'leaflet'
@@ -554,56 +482,8 @@ const LiveTracking = ({ captainLocation, ride, isTracking = true }) => {
           </svg>
         </button>
 
-        {/* Route Toggle */}
-        <button
-          onClick={handleToggleRoute}
-          className="map-overlay-item group relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-2xl hover:shadow-emerald-500/30 hover:scale-110 transition-all duration-300"
-          title={showRoute ? "Hide route" : "Show route"}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-          <svg className={`w-5 h-5 ${showRoute ? 'text-emerald-400' : 'text-gray-400'} group-hover:text-emerald-300 transition-colors`} fill="currentColor" viewBox="0 0 24 24">
-            <path d="M4.5 9c-.83 0-1.5.67-1.5 1.5S3.67 12 4.5 12 6 11.33 6 10.5 5.33 9 4.5 9zm0-4c-.83 0-1.5.67-1.5 1.5S3.67 8 4.5 8 6 7.33 6 6.5 5.33 5 4.5 5zM20 8h-8v2h8V8zm-8 6h8v2h-8v-2zm13-5.5c0-.83-.67-1.5-1.5-1.5S20 3.67 20 4.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5zM13 3v2h8V3h-8zm0 18h8v-2h-8v2zm8-8h-8v2h8v-2z"/>
-          </svg>
-        </button>
 
-        {/* Traffic Toggle */}
-        <button
-          onClick={handleToggleTraffic}
-          className="map-overlay-item group relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-2xl hover:shadow-amber-500/30 hover:scale-110 transition-all duration-300"
-          title="Toggle traffic"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-          <svg className="w-5 h-5 text-amber-400 group-hover:text-amber-300 transition-colors" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M18 10h-2v4h2v-4zm-8 0H8v4h2v-4zm-4 0H4v4h2v-4zm16 8c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h16c1.1 0 2 .9 2 2v12z"/>
-          </svg>
-        </button>
 
-        {/* Theme Toggle */}
-        <button
-          onClick={() => {
-            const layers = mapInstance.current._layers
-            let currentLayer
-            for (let key in layers) {
-              if (layers[key]._url && layers[key]._url.includes('tile')) {
-                currentLayer = layers[key]
-                break
-              }
-            }
-            
-            if (currentLayer && currentLayer._url.includes('dark')) {
-              currentLayer.setUrl(lightTheme.tileLayer)
-            } else if (currentLayer) {
-              currentLayer.setUrl(darkTheme.tileLayer)
-            }
-          }}
-          className="map-overlay-item group relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-2xl hover:shadow-purple-500/30 hover:scale-110 transition-all duration-300"
-          title="Toggle theme"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-          <svg className="w-5 h-5 text-purple-400 group-hover:text-purple-300 transition-colors" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/>
-          </svg>
-        </button>
       </div>
 
       {/* Location Info Panel */}
@@ -685,35 +565,7 @@ const LiveTracking = ({ captainLocation, ride, isTracking = true }) => {
         </div>
       )}
 
-      {/* GPS Signal Indicator */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-        {pulseActive && (
-          <div className="relative w-40 h-40">
-            <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-ping opacity-30"></div>
-            <div className="absolute inset-8 border-4 border-cyan-400 rounded-full animate-ping" style={{animationDelay: '0.2s'}}></div>
-            <div className="absolute inset-16 border-4 border-blue-400 rounded-full animate-ping" style={{animationDelay: '0.4s'}}></div>
-          </div>
-        )}
-      </div>
-
-      {/* Compass Overlay */}
-      <div className="absolute bottom-20 right-4 z-20">
-        <div className="w-16 h-16 bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl flex items-center justify-center">
-          <div className="relative w-12 h-12">
-            <div className="absolute inset-0 rounded-full border-2 border-white/20"></div>
-            <div className="absolute top-1 left-1/2 transform -translate-x-1/2 text-xs text-white/60">N</div>
-            <div 
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{ transform: `translate(-50%, -50%) rotate(${bearing}deg)` }}
-            >
-              <div className="w-0 h-0 border-l-6 border-r-6 border-t-8 border-transparent border-t-red-500"></div>
-            </div>
-            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-xs text-white/60">S</div>
-            <div className="absolute left-1 top-1/2 transform -translate-y-1/2 text-xs text-white/60">W</div>
-            <div className="absolute right-1 top-1/2 transform -translate-y-1/2 text-xs text-white/60">E</div>
-          </div>
-        </div>
-      </div>
+      
     </div>
   )
 }

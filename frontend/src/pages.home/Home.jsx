@@ -1,50 +1,62 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
+import React, { useEffect, useRef, useState, useContext, lazy, Suspense } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import axios from 'axios';
 import 'remixicon/fonts/remixicon.css';
-import LocationSearchPanel from '../components/LocationSearchPanel';
-import VehiclePanel from '../components/VehiclePanel';
-import ConfirmRide from '../components/ConfirmRide';
-import LookingForDriver from '../components/LookingForDriver';
-import WaitingForDriver from '../components/WaitingForDriver';
 import { SocketContext } from '../context/SocketContext';
 import { UserDataContext } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
-import LiveTracking from '../components/LiveTracking';
+
+// Lazy load components for better performance
+const LiveTracking = lazy(() => import('../components/LiveTracking'));
+const LocationSearchPanel = lazy(() => import('../components/LocationSearchPanel'));
+const VehiclePanel = lazy(() => import('../components/VehiclePanel'));
+const ConfirmRide = lazy(() => import('../components/ConfirmRide'));
+const LookingForDriver = lazy(() => import('../components/LookingForDriver'));
+const WaitingForDriver = lazy(() => import('../components/WaitingForDriver'));
+
+const NotificationToast = lazy(() => import('../components/compo.notification/NotificationToast'));
+const ParentRequestsPanel = lazy(() => import('../components/compo.user/ParentRequestsPanel'));
+const ParentRequestsBadge = lazy(() => import('../components/compo.user/ParentRequestsBadge'));
+const BottomFormPanel = lazy(() => import('../components/compo.user/BottomFormPanel'));
 
 const Home = () => {
+    // State variables
     const [pickup, setPickup] = useState('');
     const [destination, setDestination] = useState('');
     const [panelOpen, setPanelOpen] = useState(false);
-    
+    const [vehiclePanel, setVehiclePanel] = useState(false);
+    const [confirmRidePanel, setConfirmRidePanel] = useState(false);
+    const [vehicleFound, setVehicleFound] = useState(false);
+    const [waitingForDriver, setWaitingForDriver] = useState(false);
+    const [activeField, setActiveField] = useState(null);
+    const [fare, setFare] = useState({});
+    const [vehicleType, setVehicleType] = useState(null);
+    const [ride, setRide] = useState(null);
+    const [parentRequests, setParentRequests] = useState([]);
+    const [showParentRequests, setShowParentRequests] = useState(false);
+    const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [mounted, setMounted] = useState(false);
+
+    // Refs
     const vehiclePanelRef = useRef(null);
     const confirmRidePanelRef = useRef(null);
     const vehicleFoundRef = useRef(null);
     const waitingForDriverRef = useRef(null);
     const panelRef = useRef(null);
     const panelCloseRef = useRef(null);
-    
-    const [vehiclePanel, setVehiclePanel] = useState(false);
-    const [confirmRidePanel, setConfirmRidePanel] = useState(false);
-    const [vehicleFound, setVehicleFound] = useState(false);
-    const [waitingForDriver, setWaitingForDriver] = useState(false);
-    
-    const [activeField, setActiveField] = useState(null);
-    
-    const [fare, setFare] = useState({});
-    
-    const [vehicleType, setVehicleType] = useState(null);
-    const [ride, setRide] = useState(null);
-    
-    const [parentRequests, setParentRequests] = useState([]);
-    const [showParentRequests, setShowParentRequests] = useState(false);
-    const [isLoadingRequests, setIsLoadingRequests] = useState(false);
-    const [notifications, setNotifications] = useState([]);
 
+    // Context and navigation
     const navigate = useNavigate();
     const { socket } = useContext(SocketContext);
     const { user } = useContext(UserDataContext);
+
+    // Initialize mounted state
+    useEffect(() => {
+        const timer = setTimeout(() => setMounted(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Enhanced socket implementation
     useEffect(() => {
@@ -79,7 +91,6 @@ const Home = () => {
             setParentRequests(prev => [newRequest, ...prev]);
             addNotification(`New parent request from ${data.parentName}`, 'info');
             
-            // Auto-show requests panel if it's the first request
             if (parentRequests.length === 0) {
                 setShowParentRequests(true);
             }
@@ -123,7 +134,6 @@ const Home = () => {
         const id = Date.now();
         setNotifications(prev => [...prev, { id, message, type, timestamp: new Date() }]);
         
-        // Auto-remove notification after 5 seconds
         setTimeout(() => {
             setNotifications(prev => prev.filter(notification => notification.id !== id));
         }, 5000);
@@ -166,10 +176,8 @@ const Home = () => {
                 }
             );
             
-            // Remove from local state
             setParentRequests(prev => prev.filter(req => req.parentId !== parentId));
             
-            // Notify parent via socket
             socket.emit('parent-request-accepted', {
                 parentId: parentId,
                 userId: user._id,
@@ -200,10 +208,8 @@ const Home = () => {
                 }
             );
             
-            // Remove from local state
             setParentRequests(prev => prev.filter(req => req.parentId !== parentId));
             
-            // Notify parent via socket
             socket.emit('parent-request-rejected', {
                 parentId: parentId,
                 userId: user._id,
@@ -262,64 +268,64 @@ const Home = () => {
 
     useGSAP(() => {
         if (vehiclePanel) {
-            gsap.to(vehiclePanelRef.current, {
-                transform: 'translateY(0)',
-                duration: 0.4,
-                ease: 'power2.out'
-            });
+            gsap.fromTo(vehiclePanelRef.current, 
+                { y: "100%", opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }
+            );
         } else {
             gsap.to(vehiclePanelRef.current, {
-                transform: 'translateY(100%)',
+                y: "100%",
+                opacity: 0,
                 duration: 0.4,
-                ease: 'power2.in'
+                ease: "power2.in"
             });
         }
     }, [vehiclePanel]);
 
     useGSAP(() => {
         if (confirmRidePanel) {
-            gsap.to(confirmRidePanelRef.current, {
-                transform: 'translateY(0)',
-                duration: 0.4,
-                ease: 'power2.out'
-            });
+            gsap.fromTo(confirmRidePanelRef.current, 
+                { y: "100%", opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }
+            );
         } else {
             gsap.to(confirmRidePanelRef.current, {
-                transform: 'translateY(100%)',
+                y: "100%",
+                opacity: 0,
                 duration: 0.4,
-                ease: 'power2.in'
+                ease: "power2.in"
             });
         }
     }, [confirmRidePanel]);
 
     useGSAP(() => {
         if (vehicleFound) {
-            gsap.to(vehicleFoundRef.current, {
-                transform: 'translateY(0)',
-                duration: 0.4,
-                ease: 'power2.out'
-            });
+            gsap.fromTo(vehicleFoundRef.current, 
+                { y: "100%", opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }
+            );
         } else {
             gsap.to(vehicleFoundRef.current, {
-                transform: 'translateY(100%)',
+                y: "100%",
+                opacity: 0,
                 duration: 0.4,
-                ease: 'power2.in'
+                ease: "power2.in"
             });
         }
     }, [vehicleFound]);
 
     useGSAP(() => {
         if (waitingForDriver) {
-            gsap.to(waitingForDriverRef.current, {
-                transform: 'translateY(0)',
-                duration: 0.4,
-                ease: 'power2.out'
-            });
+            gsap.fromTo(waitingForDriverRef.current, 
+                { y: "100%", opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" }
+            );
         } else {
             gsap.to(waitingForDriverRef.current, {
-                transform: 'translateY(100%)',
+                y: "100%",
+                opacity: 0,
                 duration: 0.4,
-                ease: 'power2.in'
+                ease: "power2.in"
             });
         }
     }, [waitingForDriver]);
@@ -400,273 +406,246 @@ const Home = () => {
         }
     }
 
-    // Notification Toast Component
-    const NotificationToast = () => (
-        <div className="fixed top-20 right-5 z-50 space-y-2 max-w-sm">
-            {notifications.map(notification => (
-                <div 
-                    key={notification.id}
-                    className={`p-4 rounded-lg shadow-lg border-l-4 transform transition-all duration-300 ${
-                        notification.type === 'success' 
-                            ? 'bg-green-50 border-green-500 text-green-700'
-                            : notification.type === 'error'
-                            ? 'bg-red-50 border-red-500 text-red-700'
-                            : 'bg-blue-50 border-blue-500 text-blue-700'
-                    }`}
-                >
-                    <div className="flex justify-between items-start">
-                        <div className="flex items-start gap-3">
-                            <i className={`mt-1 ${
-                                notification.type === 'success' ? 'ri-checkbox-circle-fill text-green-500' :
-                                notification.type === 'error' ? 'ri-error-warning-fill text-red-500' :
-                                'ri-information-fill text-blue-500'
-                            }`}></i>
-                            <div>
-                                <p className="font-medium text-sm">{notification.message}</p>
-                                <p className="text-xs mt-1 opacity-75">
-                                    {new Date(notification.timestamp).toLocaleTimeString()}
-                                </p>
-                            </div>
-                        </div>
-                        <button 
-                            onClick={() => removeNotification(notification.id)}
-                            className="text-gray-500 hover:text-gray-700 ml-2"
-                        >
-                            <i className="ri-close-line"></i>
-                        </button>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
+    // Custom CSS animations
+    const styles = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        
+        .animate-slideInRight {
+            animation: slideInRight 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .animate-slideInUp {
+            animation: slideInUp 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .animate-shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+    `
 
     return (
-        <div className='h-screen relative overflow-hidden'>
+        <div className='h-screen bg-gradient-to-b from-gray-900 via-black to-blue-900 relative overflow-hidden'>
+            <style>{styles}</style>
+
             {/* Logo */}
-            <img
-                className='w-16 absolute left-5 top-5 z-20'
-                src="/autotracklogo.png"
-                alt="autotrack"
-            />
+            <div className={`fixed top-4 left-4 sm:top-6 sm:left-6 z-30 transition-all duration-1000 ${
+                mounted ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'
+            }`}>
+                <div className='relative group/logo'>
+                    <div className='relative w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/30 group-hover/logo:shadow-blue-500/50 transition-all duration-500 group-hover/logo:scale-110 group-hover/logo:rotate-12'>
+                        <div className='absolute inset-0 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-xl sm:rounded-2xl blur opacity-50 group-hover/logo:opacity-100 transition-opacity duration-500'></div>
+                        <img 
+                            className='w-6 sm:w-8 relative z-10 filter brightness-0 invert' 
+                            src="/autotracklogo.png" 
+                            alt="AutoTrack" 
+                        />
+                    </div>
+                    <div className='absolute top-full left-0 mt-2 opacity-0 group-hover/logo:opacity-100 transition-opacity duration-300 pointer-events-none'>
+                        <div className='bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg'>
+                            AutoTrack Ride Booking
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {/* Notification Toast */}
-            <NotificationToast />
+            <Suspense fallback={null}>
+                <NotificationToast 
+                    notifications={notifications} 
+                    removeNotification={removeNotification} 
+                />
+            </Suspense>
 
-            {/* Parent Requests Notification Badge */}
-            {parentRequests.length > 0 && (
-                <div 
-                    className='fixed top-20 right-5 z-30 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center cursor-pointer shadow-lg hover:bg-red-600 transition-colors animate-bounce'
-                    onClick={() => setShowParentRequests(true)}
-                    title={`${parentRequests.length} pending parent request${parentRequests.length > 1 ? 's' : ''}`}
-                >
-                    {parentRequests.length}
-                    <span className='absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full animate-pulse'></span>
-                </div>
-            )}
+            {/* Parent Requests Badge */}
+            <Suspense fallback={null}>
+                <ParentRequestsBadge 
+                    parentRequests={parentRequests}
+                    setShowParentRequests={setShowParentRequests}
+                />
+            </Suspense>
 
             {/* Parent Requests Panel */}
-            {showParentRequests && (
-                <div className='fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-40 flex items-center justify-center p-4'>
-                    <div className='bg-white rounded-xl p-6 w-full max-w-md max-h-96 overflow-y-auto shadow-2xl'>
-                        <div className='flex justify-between items-center mb-6 pb-4 border-b border-gray-200'>
-                            <div>
-                                <h3 className='text-2xl font-bold text-gray-900'>Parent Requests</h3>
-                                <p className='text-sm text-gray-600 mt-1'>
-                                    {parentRequests.length} pending request{parentRequests.length > 1 ? 's' : ''}
-                                </p>
-                            </div>
-                            <button 
-                                onClick={() => setShowParentRequests(false)}
-                                className='text-gray-400 hover:text-gray-600 text-2xl transition-colors'
-                            >
-                                <i className="ri-close-line"></i>
-                            </button>
-                        </div>
-                        
-                        {isLoadingRequests ? (
-                            <div className='flex flex-col items-center justify-center py-12'>
-                                <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4'></div>
-                                <p className='text-gray-600 font-medium'>Loading requests...</p>
-                            </div>
-                        ) : parentRequests.length === 0 ? (
-                            <div className='text-center py-12'>
-                                <i className="ri-inbox-line text-5xl text-gray-300 mb-4"></i>
-                                <p className='text-gray-500 text-lg font-medium'>No pending requests</p>
-                                <p className='text-gray-400 text-sm mt-1'>Parent requests will appear here</p>
-                            </div>
-                        ) : (
-                            <div className='space-y-4'>
-                                {parentRequests.map(request => (
-                                    <div 
-                                        key={request.parentId || request._id} 
-                                        className='border border-gray-200 rounded-xl p-5 bg-gradient-to-r from-gray-50 to-white hover:from-white hover:to-gray-50 transition-all duration-300 shadow-sm hover:shadow-md'
-                                    >
-                                        <div className='flex justify-between items-start mb-4'>
-                                            <div className='flex-1'>
-                                                <div className='flex items-center gap-3 mb-2'>
-                                                    <div className='w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-lg'>
-                                                        {request.parentName?.charAt(0) || 'P'}
-                                                    </div>
-                                                    <div>
-                                                        <p className='font-bold text-lg text-gray-900'>{request.parentName}</p>
-                                                        <p className='text-sm text-gray-600 flex items-center gap-1 mt-1'>
-                                                            <i className="ri-time-line"></i>
-                                                            {new Date(request.requestedAt || request.timestamp).toLocaleDateString()} at {' '}
-                                                            {new Date(request.requestedAt || request.timestamp).toLocaleTimeString()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <p className='text-sm text-gray-700 bg-blue-50 p-3 rounded-lg border border-blue-100'>
-                                                    <i className="ri-shield-check-line text-blue-500 mr-2"></i>
-                                                    Wants to track your rides for safety and receive ride notifications.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className='flex gap-3'>
-                                            <button
-                                                onClick={() => acceptParentRequest(request.parentId)}
-                                                disabled={isLoadingRequests}
-                                                className='flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed'
-                                            >
-                                                {isLoadingRequests ? (
-                                                    <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
-                                                ) : (
-                                                    <>
-                                                        <i className="ri-check-line"></i>
-                                                        Accept
-                                                    </>
-                                                )}
-                                            </button>
-                                            <button
-                                                onClick={() => rejectParentRequest(request.parentId)}
-                                                disabled={isLoadingRequests}
-                                                className='flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-red-500/25 disabled:opacity-50 disabled:cursor-not-allowed'
-                                            >
-                                                <i className="ri-close-line"></i>
-                                                Reject
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+            <Suspense fallback={null}>
+                <ParentRequestsPanel
+                    showParentRequests={showParentRequests}
+                    setShowParentRequests={setShowParentRequests}
+                    parentRequests={parentRequests}
+                    isLoadingRequests={isLoadingRequests}
+                    acceptParentRequest={acceptParentRequest}
+                    rejectParentRequest={rejectParentRequest}
+                />
+            </Suspense>
 
-            {/* LiveTracking as Background - Fixed positioning */}
+            {/* LiveTracking as Background */}
             <div className='fixed top-0 left-0 w-full h-full z-0'>
-                <LiveTracking />
-            </div>
-
-            {/* Main Content Overlay */}
-            <div className='relative z-10 flex flex-col justify-end h-full'>
-                {/* Bottom Form Panel */}
-                <div className='bg-white relative rounded-t-3xl shadow-2xl'>
-                    <h5
-                        ref={panelCloseRef}
-                        onClick={() => setPanelOpen(false)}
-                        className='absolute opacity-0 right-6 top-6 text-2xl z-30 cursor-pointer text-gray-600 hover:text-gray-800 transition-colors'
-                    >
-                        <i className="ri-arrow-down-wide-line"></i>
-                    </h5>
-
-                    <div className='p-6'>
-                        <h4 className='text-2xl font-bold text-gray-900 mb-2'>Find a trip</h4>
-                        <p className='text-gray-600 mb-4'>Book a ride in seconds</p>
-
-                        <form className='relative py-3' onSubmit={submitHandler}>
-                            <div className="line absolute h-16 w-1 top-[50%] -translate-y-1/2 left-5 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full z-10 shadow-lg"></div>
-                            <input
-                                onClick={() => {
-                                    setPanelOpen(true);
-                                    setActiveField('pickup');
-                                }}
-                                value={pickup}
-                                onChange={handlePickupChange}
-                                className='bg-gray-100 px-12 py-4 text-lg rounded-xl w-full relative z-20 border-2 border-transparent focus:border-blue-500 focus:bg-white focus:shadow-lg transition-all duration-300'
-                                type="text"
-                                placeholder='Add a pick-up location'
-                            />
-                            <input
-                                onClick={() => {
-                                    setPanelOpen(true);
-                                    setActiveField('destination');
-                                }}
-                                value={destination}
-                                onChange={handleDestinationChange}
-                                className='bg-gray-100 px-12 py-4 text-lg rounded-xl w-full mt-3 relative z-20 border-2 border-transparent focus:border-blue-500 focus:bg-white focus:shadow-lg transition-all duration-300'
-                                type="text"
-                                placeholder='Enter your destination'
-                            />
-                        </form>
-                        <button
-                            onClick={findTrip}
-                            disabled={!pickup || !destination}
-                            className='bg-gradient-to-r from-black to-gray-800 text-white px-4 py-4 rounded-xl mt-4 w-full relative z-20 font-semibold text-lg hover:from-gray-800 hover:to-black transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed'
-                        >
-                            Find Trip
-                        </button>
+                <Suspense fallback={
+                    <div className='h-full bg-gradient-to-br from-blue-900 via-black to-cyan-900 flex items-center justify-center'>
+                        <div className='text-center'>
+                            <div className='relative w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4'>
+                                <div className='absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full animate-ping opacity-20'></div>
+                                <div className='absolute inset-2 sm:inset-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-2xl shadow-blue-500/50'>
+                                    <i className="ri-navigation-line text-xl sm:text-3xl text-white animate-spin"></i>
+                                </div>
+                            </div>
+                            <p className='text-white/80 font-semibold text-lg mb-2'>Loading Map</p>
+                            <p className='text-blue-400/60 text-sm animate-pulse'>Initializing navigation...</p>
+                        </div>
                     </div>
-                </div>
-
-              
+                }>
+                    <LiveTracking />
+                </Suspense>
             </div>
+
+            {/* Bottom Form Panel */}
+            <Suspense fallback={
+                <div className="fixed bottom-0 left-0 right-0 h-48 bg-white rounded-t-2xl animate-pulse"></div>
+            }>
+                <BottomFormPanel
+                    panelOpen={panelOpen}
+                    setPanelOpen={setPanelOpen}
+                    panelCloseRef={panelCloseRef}
+                    pickup={pickup}
+                    setPickup={setPickup}
+                    destination={destination}
+                    setDestination={setDestination}
+                    setActiveField={setActiveField}
+                    handlePickupChange={handlePickupChange}
+                    handleDestinationChange={handleDestinationChange}
+                    findTrip={findTrip}
+                    submitHandler={submitHandler}
+                />
+            </Suspense>
 
             {/* Overlay Panels */}
+            {/* Vehicle Panel */}
             <div
                 ref={vehiclePanelRef}
-                className='fixed w-full z-30 bottom-0 translate-y-full bg-white px-3 py-10 pt-12 rounded-t-3xl shadow-2xl'
+                className='fixed w-full z-30 bottom-0 bg-white rounded-t-2xl sm:rounded-t-3xl shadow-2xl'
+                style={{ opacity: 0, transform: 'translateY(100%)' }}
             >
-                <VehiclePanel
-                    selectVehicle={setVehicleType}
-                    fare={fare}
-                    setConfirmRidePanel={setConfirmRidePanel}
-                    setVehiclePanel={setVehiclePanel}
-                />
+                <Suspense fallback={
+                    <div className="p-4 sm:p-6 pt-8">
+                        <div className="text-center py-10">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            <p className="text-gray-600 mt-4">Loading vehicle options...</p>
+                        </div>
+                    </div>
+                }>
+                    <VehiclePanel
+                        selectVehicle={setVehicleType}
+                        fare={fare}
+                        setConfirmRidePanel={setConfirmRidePanel}
+                        setVehiclePanel={setVehiclePanel}
+                    />
+                </Suspense>
             </div>
 
+            {/* Confirm Ride Panel */}
             <div
                 ref={confirmRidePanelRef}
-                className='fixed w-full z-30 bottom-0 translate-y-full bg-white px-3 py-6 pt-12 rounded-t-3xl shadow-2xl'
+                className='fixed w-full z-30 bottom-0 bg-white rounded-t-2xl sm:rounded-t-3xl shadow-2xl'
+                style={{ opacity: 0, transform: 'translateY(100%)' }}
             >
-                <ConfirmRide
-                    createRide={createRide}
-                    pickup={pickup}
-                    destination={destination}
-                    fare={fare}
-                    vehicleType={vehicleType}
-                    setConfirmRidePanel={setConfirmRidePanel}
-                    setVehicleFound={setVehicleFound}
-                />
+                <Suspense fallback={
+                    <div className="p-4 sm:p-6 pt-8">
+                        <div className="text-center py-10">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            <p className="text-gray-600 mt-4">Confirming ride details...</p>
+                        </div>
+                    </div>
+                }>
+                    <ConfirmRide
+                        createRide={createRide}
+                        pickup={pickup}
+                        destination={destination}
+                        fare={fare}
+                        vehicleType={vehicleType}
+                        setConfirmRidePanel={setConfirmRidePanel}
+                        setVehicleFound={setVehicleFound}
+                    />
+                </Suspense>
             </div>
 
+            {/* Looking for Driver Panel */}
             <div
                 ref={vehicleFoundRef}
-                className='fixed w-full z-30 bottom-0 translate-y-full bg-white px-3 py-6 pt-12 rounded-t-3xl shadow-2xl'
+                className='fixed w-full z-30 bottom-0 bg-white rounded-t-2xl sm:rounded-t-3xl shadow-2xl'
+                style={{ opacity: 0, transform: 'translateY(100%)' }}
             >
-                <LookingForDriver
-                    ride={ride}
-                    createRide={createRide}
-                    pickup={pickup}
-                    destination={destination}
-                    fare={fare}
-                    vehicleType={vehicleType}
-                    setVehicleFound={setVehicleFound}
-                />
+                <Suspense fallback={
+                    <div className="p-4 sm:p-6 pt-8">
+                        <div className="text-center py-10">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            <p className="text-gray-600 mt-4">Searching for captain...</p>
+                        </div>
+                    </div>
+                }>
+                    <LookingForDriver
+                        ride={ride}
+                        createRide={createRide}
+                        pickup={pickup}
+                        destination={destination}
+                        fare={fare}
+                        vehicleType={vehicleType}
+                        setVehicleFound={setVehicleFound}
+                    />
+                </Suspense>
             </div>
 
+            {/* Waiting for Driver Panel */}
             <div
                 ref={waitingForDriverRef}
-                className='fixed w-full z-30 bottom-0 bg-white px-3 py-6 pt-12 rounded-t-3xl shadow-2xl'
+                className='fixed w-full z-30 bottom-0 bg-white rounded-t-2xl sm:rounded-t-3xl shadow-2xl'
+                style={{ opacity: 0, transform: 'translateY(100%)' }}
             >
-                <WaitingForDriver
-                    ride={ride}
-                    setVehicleFound={setVehicleFound}
-                    setWaitingForDriver={setWaitingForDriver}
-                    waitingForDriver={waitingForDriver}
-                />
+                <Suspense fallback={
+                    <div className="p-4 sm:p-6 pt-8">
+                        <div className="text-center py-10">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            <p className="text-gray-600 mt-4">Captain is arriving...</p>
+                        </div>
+                    </div>
+                }>
+                    <WaitingForDriver
+                        ride={ride}
+                        setVehicleFound={setVehicleFound}
+                        setWaitingForDriver={setWaitingForDriver}
+                        waitingForDriver={waitingForDriver}
+                    />
+                </Suspense>
             </div>
+
+            {/* Location Search Panel (when activeField is set) */}
+            {activeField && (
+                <Suspense fallback={
+                    <div className="fixed inset-0 z-40 bg-white flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    </div>
+                }>
+                    <LocationSearchPanel
+                        setPickup={setPickup}
+                        setDestination={setDestination}
+                        activeField={activeField}
+                        setActiveField={setActiveField}
+                        setPanelOpen={setPanelOpen}
+                    />
+                </Suspense>
+            )}
         </div>
     );
 };
