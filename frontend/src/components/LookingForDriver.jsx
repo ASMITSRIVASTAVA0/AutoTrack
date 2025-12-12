@@ -1,177 +1,211 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 
 const LookingForDriver = (props) => {
-    const [elapsedTime, setElapsedTime] = useState(0);
-    
+    const [searchTime, setSearchTime] = useState(0);
+    const [searching, setSearching] = useState(true);
+    const [nearbyDrivers, setNearbyDrivers] = useState(3);
+    const [estimatedMatchTime, setEstimatedMatchTime] = useState('15-30 seconds');
+
     // Safely extract addresses
     const pickupAddress = typeof props.pickup === 'string' 
         ? props.pickup 
-        : props.pickup?.address || '';
+        : props.pickup?.address || 'Pickup location';
 
     const destinationAddress = typeof props.destination === 'string' 
         ? props.destination 
-        : props.destination?.address || '';
+        : props.destination?.address || 'Destination';
 
     // Safely extract ride data
     const rideData = props.ride || {};
+    const fareAmount = props.fare?.[props.vehicleType] || '--';
 
-    // Timer for elapsed time
     useEffect(() => {
         const timer = setInterval(() => {
-            setElapsedTime(prev => prev + 1);
+            setSearchTime(prev => prev + 1);
+            
+            // Simulate driver count changes
+            if (searchTime % 5 === 0) {
+                setNearbyDrivers(prev => {
+                    const newCount = prev + (Math.random() > 0.5 ? 1 : -1);
+                    return Math.max(1, Math.min(10, newCount));
+                });
+            }
+            
+            // Update estimated time
+            if (searchTime % 10 === 0) {
+                const times = ['10-20 seconds', '15-30 seconds', '20-40 seconds', '25-50 seconds'];
+                const randomTime = times[Math.floor(Math.random() * times.length)];
+                setEstimatedMatchTime(randomTime);
+            }
         }, 1000);
 
         return () => clearInterval(timer);
-    }, []);
+    }, [searchTime]);
 
-    // Format elapsed time
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
-    // Get vehicle image based on type
-    const getVehicleImage = () => {
-        switch(props.vehicleType) {
-            case 'car':
-                return "https://swyft.pl/wp-content/uploads/2023/05/how-many-people-can-a-uberx-take.jpg";
-            case 'moto':
-                return "https://www.uber-assets.com/image/upload/f_auto,q_auto:eco,c_fill,h_638,w_956/v1649231091/assets/2c/7fa194-c954-49b2-9c6d-a3b8601370f5/original/Uber_Moto_Orange_312x208_pixels_Mobile.png";
-            case 'auto':
-                return "https://www.uber-assets.com/image/upload/f_auto,q_auto:eco,c_fill,h_368,w_552/v1648431773/assets/1d/db8c56-0204-4ce4-81ce-56a11a07fe98/original/Uber_Auto_558x372_pixels_Desktop.png";
-            default:
-                return "https://swyft.pl/wp-content/uploads/2023/05/how-many-people-can-a-uberx-take.jpg";
-        }
+    const vehicleNames = {
+        car: 'Car',
+        moto: 'Moto',
+        auto: 'Auto'
     };
 
     return (
-        <div className='text-gray-100'>
-            <h5 
-                className='p-1 text-center w-[93%] absolute top-0' 
-                onClick={() => {
-                    props.setVehicleFound(false)
-                }}>
-                <i className="text-3xl text-gray-400 hover:text-gray-200 ri-arrow-down-wide-line transition-colors cursor-pointer"></i>
-            </h5>
+        <div className="relative min-h-full px-4 py-6 sm:px-6 sm:py-8">
+            {/* Header with Drag Handle */}
+            <div className="sticky top-0 bg-white z-10 pb-4">
+                <div className="flex justify-center mb-4">
+                    <div className="w-16 h-1.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 rounded-full"></div>
+                </div>
+                
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent">
+                            Finding Your Captain
+                        </h3>
+                        
+                    </div>
+                    <div className="text-right">
+                        <div className="text-lg font-bold text-gray-900">{formatTime(searchTime)}</div>
+                        <div className="text-xs text-gray-500">Search time</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Animated Search Section */}
+            <div className="relative m-8">
+                {/* Pulsing Radar Animation */}
+                <div className="relative w-40 h-40 mx-auto mb-6">
+                    {/* Outer circle pulses */}
+                    <div className="absolute inset-0 border-4 border-blue-200 rounded-full animate-ping"></div>
+                    <div className="absolute inset-4 border-4 border-blue-300 rounded-full animate-ping" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="absolute inset-8 border-4 border-blue-400 rounded-full animate-ping" style={{ animationDelay: '0.4s' }}></div>
+                    
+                    {/* Center car icon */}
+                    <div className="absolute inset-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-2xl">
+                        <i className="ri-car-line text-white text-3xl sm:text-4xl animate-bounce"></i>
+                    </div>
+                    
+                    {/* Floating car icons */}
+                    {[0, 1, 2].map((index) => (
+                        <div 
+                            key={index}
+                            className="absolute w-8 h-8 bg-gradient-to-br from-gray-800 to-black rounded-full flex items-center justify-center shadow-lg animate-float"
+                            style={{
+                                top: `${30 + 40 * Math.sin(index * 120 * Math.PI/180)}%`,
+                                left: `${30 + 40 * Math.cos(index * 120 * Math.PI/180)}%`,
+                                animationDelay: `${index * 0.5}s`,
+                                animationDuration: '3s'
+                            }}
+                        >
+                            <i className="ri-car-line text-white text-sm"></i>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Status Indicators */}
+                
+            </div>
+
+            {/* Trip Details Card */}
+            <div className="bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-6">
+                
+
+                {/* Route Details */}
+                <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-1">
+                            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                                <i className="ri-map-pin-user-fill text-white text-xs"></i>
+                            </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-gray-500">PICKUP</p>
+                            <p className="text-sm font-semibold text-gray-900 truncate">{pickupAddress}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-1">
+                            <div className="w-6 h-6 bg-gradient-to-br from-emerald-500 to-green-500 rounded-full flex items-center justify-center">
+                                <i className="ri-map-pin-2-fill text-white text-xs"></i>
+                            </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-gray-500">DESTINATION</p>
+                            <p className="text-sm font-semibold text-gray-900 truncate">{destinationAddress}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* OTP Display (if available) */}
+                {rideData.otp && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-full flex items-center justify-center">
+                                    <i className="ri-shield-keyhole-line text-white"></i>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-gray-500">RIDE OTP</p>
+                                    <p className="text-sm font-semibold text-gray-900">Share this with your driver</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-2xl font-bold text-gray-900 font-mono bg-amber-50 px-3 py-2 rounded-lg">
+                                    {rideData.otp}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             
-            <div className='text-center'>
-                <div className='flex items-center justify-between mb-4'>
-                    <div className='text-left'>
-                        <h1 className='text-2xl font-bold text-gray-100'>Looking for Driver</h1>
-                        <p className='text-sm text-gray-400 mt-1'>
-                            <i className="ri-time-line mr-1"></i>
-                            Searching for {formatTime(elapsedTime)}
-                        </p>
-                    </div>
-                    <div className='flex items-center gap-2 bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-700/50'>
-                        <div className='w-2 h-2 bg-emerald-400 rounded-full animate-pulse'></div>
-                        <span className='text-sm text-emerald-300'>Live Search</span>
-                    </div>
-                </div>
-                
-                <div className='flex flex-col items-center justify-center py-6'>
-                    <div className='relative'>
-                        <div className='w-24 h-24 rounded-full bg-gradient-to-r from-emerald-900/50 to-emerald-800/50 border-4 border-emerald-800/50 flex items-center justify-center animate-pulse'>
-                            <i className="ri-car-line text-5xl text-emerald-400"></i>
-                        </div>
-                        <div className='absolute -top-2 -right-2 w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center animate-bounce'>
-                            <i className="ri-search-eye-line text-lg text-gray-900"></i>
-                        </div>
-                        <div className='absolute -bottom-2 -left-2 w-8 h-8 bg-emerald-400 rounded-full flex items-center justify-center'>
-                            <span className='text-xs font-bold text-gray-900'>{props.vehicleType === 'car' ? '4' : props.vehicleType === 'auto' ? '3' : '1'}</span>
-                        </div>
-                    </div>
-                    
-                    <div className='mt-6 w-full max-w-xs'>
-                        <div className='flex items-center justify-center gap-3'>
-                            {[1, 2, 3, 4, 5].map((dot) => (
-                                <div 
-                                    key={dot}
-                                    className='w-2 h-2 bg-emerald-400 rounded-full animate-pulse'
-                                    style={{ animationDelay: `${dot * 0.2}s` }}
-                                ></div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                
-                <div className='mt-8 text-left space-y-3'>
-                    <div className='flex items-center gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:bg-gray-800/70 transition-colors'>
-                        <div className='w-10 h-10 bg-emerald-900/50 rounded-full flex items-center justify-center border border-emerald-700/50'>
-                            <i className="ri-map-pin-user-fill text-emerald-400"></i>
-                        </div>
-                        <div className='flex-1'>
-                            <h3 className='text-base font-medium text-gray-300'>Pickup Location</h3>
-                            <p className='text-sm mt-1 text-gray-400 truncate'>{pickupAddress}</p>
-                        </div>
-                    </div>
-                    
-                    <div className='flex items-center gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:bg-gray-800/70 transition-colors'>
-                        <div className='w-10 h-10 bg-emerald-900/50 rounded-full flex items-center justify-center border border-emerald-700/50'>
-                            <i className="ri-map-pin-2-fill text-emerald-400"></i>
-                        </div>
-                        <div className='flex-1'>
-                            <h3 className='text-base font-medium text-gray-300'>Destination</h3>
-                            <p className='text-sm mt-1 text-gray-400 truncate'>{destinationAddress}</p>
-                        </div>
-                    </div>
-                    
-                    {rideData.otp && (
-                        <div className='flex items-center gap-4 p-4 bg-emerald-900/20 rounded-xl border border-emerald-800/50 hover:bg-emerald-900/30 transition-colors'>
-                            <div className='w-10 h-10 bg-emerald-800/50 rounded-full flex items-center justify-center border border-emerald-700/50'>
-                                <i className="ri-shield-keyhole-line text-emerald-400"></i>
-                            </div>
-                            <div className='flex-1'>
-                                <h3 className='text-base font-medium text-emerald-300'>Ride OTP</h3>
-                                <p className='text-lg font-bold mt-1 text-emerald-400 tracking-wider'>{rideData.otp}</p>
-                                <p className='text-xs text-emerald-500/80 mt-1'>Share this with driver to start ride</p>
-                            </div>
-                        </div>
-                    )}
-                    
-                    <div className='flex items-center gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700'>
-                        <div className='w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center border border-gray-700'>
-                            <i className="ri-currency-line text-gray-400"></i>
-                        </div>
-                        <div className='flex-1'>
-                            <h3 className='text-base font-medium text-gray-300'>Fare Estimate</h3>
-                            <p className='text-xl font-bold mt-1 text-emerald-400'>₹{props.fare[props.vehicleType] || '--'}</p>
-                        </div>
-                        <img 
-                            className='w-16 h-12 object-cover rounded-lg border border-emerald-700/50' 
-                            src={getVehicleImage()} 
-                            alt="Vehicle" 
-                        />
-                    </div>
-                </div>
-                
-                <div className='mt-8 p-4 bg-gray-900/50 rounded-xl border border-gray-700'>
-                    <div className='flex items-center justify-center gap-2 mb-2'>
-                        <i className="ri-information-line text-emerald-400"></i>
-                        <p className='text-sm text-gray-400 text-center'>
-                            We're searching for the best driver near your location...
-                        </p>
-                    </div>
-                    <div className='flex items-center justify-between text-xs text-gray-500'>
-                        <span>• Matching with drivers</span>
-                        <span>• Checking availability</span>
-                        <span>• Confirming ride</span>
-                    </div>
-                </div>
-                
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
                 <button
-                    onClick={() => {
-                        props.setVehicleFound(false)
-                    }}
-                    className='w-full mt-4 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 text-gray-300 font-medium p-3 rounded-xl border border-gray-700 transition-all duration-300 flex items-center justify-center gap-2'
+                    onClick={() => props.setVehicleFound(false)}
+                    className="group w-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-semibold py-3 rounded-xl hover:from-gray-200 hover:to-gray-300 hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
                 >
-                    <i className="ri-close-line"></i>
+                    <i className="ri-close-line group-hover:rotate-90 transition-transform"></i>
                     Cancel Search
                 </button>
-            </div>
-        </div>
-    )
-}
 
-export default LookingForDriver
+            </div>
+
+            {/* Custom CSS for animations */}
+            <style jsx>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0) rotate(0deg); }
+                    50% { transform: translateY(-20px) rotate(180deg); }
+                }
+                
+                @keyframes slideInUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                
+                .animate-float {
+                    animation: float 3s ease-in-out infinite;
+                }
+                
+                .animate-slideInUp {
+                    animation: slideInUp 0.5s ease-out;
+                }
+                
+                @media (max-width: 640px) {
+                    .text-2xl { font-size: 1.5rem; }
+                    .text-3xl { font-size: 1.875rem; }
+                }
+            `}</style>
+        </div>
+    );
+};
+
+export default LookingForDriver;

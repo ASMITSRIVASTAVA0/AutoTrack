@@ -93,21 +93,6 @@ app.use("/user-parents", userParentRoutes);
 
 
 
-const mapService = require('./services/maps.service');
-
-app.get('/test-getdisttime', async (req, res) => {
-  try {
-    const testResult = await mapService.getDistanceTime(
-      { lat: 40.7128, lng: -74.0060 },
-      { lat: 34.0522, lng: -118.2437 }
-    );
-    res.json(testResult);
-  } catch (error) {
-    console.log('Error in /test-getdisttime at app.js');
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });

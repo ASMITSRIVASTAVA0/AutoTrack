@@ -14,7 +14,7 @@ const VehiclePanel = (props) => {
     const vehicles = [
         {
             id: 'car',
-            name: 'UberGo',
+            name: 'Car',
             icon: 'ri-car-line',
             seats: '4',
             time: estimatedTime.car,
@@ -44,7 +44,7 @@ const VehiclePanel = (props) => {
         },
         {
             id: 'auto',
-            name: 'UberAuto',
+            name: 'Auto',
             icon: 'ri-taxi-line',
             seats: '3',
             time: estimatedTime.auto,
@@ -101,45 +101,17 @@ const VehiclePanel = (props) => {
     `;
 
     return (
-        <div className="relative">
+        <div className="relative h-full">
             <style>{styles}</style>
 
             {/* Drag Handle */}
             <div className="flex justify-center mb-4 sm:mb-6">
                 <div className="w-12 sm:w-16 h-1 sm:h-1.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 rounded-full"></div>
             </div>
-
-            {/* Header */}
-            <div className="mb-4 sm:mb-6 animate-slideInUp">
-                <div className="flex items-center justify-between mb-2">
-                    <div>
-                        <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent">
-                            Choose a Vehicle
-                        </h2>
-                        <p className="text-gray-600 text-xs sm:text-sm mt-1">
-                            Select the ride that best fits your needs
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm sm:text-base font-medium text-gray-700">{estimatedDistance}</p>
-                        <p className="text-xs text-gray-500">Total distance</p>
-                    </div>
-                </div>
-                
-                {/* Savings Alert */}
-                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-3 mt-3">
-                    <div className="flex items-center gap-2">
-                        <i className="ri-money-dollar-circle-line text-blue-500 text-lg"></i>
-                        <div>
-                            <p className="text-sm font-medium text-blue-700">Save more with Moto or Auto</p>
-                            <p className="text-xs text-blue-600">Up to 40% cheaper than car rides</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <br/>
 
             {/* Vehicle Options */}
-            <div className="space-y-3 sm:space-y-4">
+            <div className="space-y-3 sm:space-y-4 m-6">
                 {vehicles.map((vehicle, index) => (
                     <div
                         key={vehicle.id}
@@ -211,18 +183,7 @@ const VehiclePanel = (props) => {
                                     </div>
                                 </div>
 
-                                {/* Features */}
-                                <div className="flex flex-wrap gap-1 sm:gap-2 mb-2">
-                                    {vehicle.features.map((feature, idx) => (
-                                        <span
-                                            key={idx}
-                                            className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-700 text-xs rounded-lg flex items-center gap-1"
-                                        >
-                                            <i className={`${vehicle.icon} text-xs`}></i>
-                                            <span className="hidden xs:inline">{feature}</span>
-                                        </span>
-                                    ))}
-                                </div>
+                              
 
                                 {/* Bottom Row: Time & Popularity */}
                                 <div className="flex items-center justify-between">
@@ -274,20 +235,9 @@ const VehiclePanel = (props) => {
                         <i className="ri-arrow-right-line"></i>
                     </button>
                 </div>
+                <br/>
 
-                {/* Additional Info */}
-                <div className="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl p-3">
-                    <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <i className="ri-information-line text-blue-500"></i>
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-600">
-                                <span className="font-medium">Note:</span> Fares are estimates and may vary based on traffic, demand, and route. Final fare shown before ride starts.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
         </div>
     );

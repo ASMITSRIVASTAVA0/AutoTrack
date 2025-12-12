@@ -34,11 +34,11 @@ module.exports.registerParent = async (req, res, next) => {
         password: hashedPassword
     });
 
-    const token = parent.generateAuthToken();
+    const tokenParent = parent.generateAuthToken();
 
-    res.cookie('token', token);
+    res.cookie('tokenParent', tokenParent);
 
-    res.status(201).json({ token, parent });
+    res.status(201).json({ tokenParent, parent });
 }
 
 module.exports.loginParent = async (req, res, next) => {
@@ -62,20 +62,20 @@ module.exports.loginParent = async (req, res, next) => {
         return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = parent.generateAuthToken();
+    const tokenParent = parent.generateAuthToken();
 
-    res.cookie('token', token);
+    res.cookie('tokenParent', tokenParent);
 
-    res.status(200).json({ token, parent });
+    res.status(200).json({ tokenParent, parent });
 }
 
 module.exports.logoutParent = async (req, res, next) => {
     try {
-        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+        const tokenParent = req.cookies.tokenParent || req.headers.authorization?.split(' ')[1];
 
-        await blackListTokenModel.create({ token: token });
+        await blackListTokenModel.create({ token: tokenParent });
 
-        res.clearCookie('token');
+        res.clearCookie('tokenParent');
         console.log("par logout at parent.controller.js");
         res.status(200).json({ message: 'Logged-out' });
     } catch (err) {
@@ -89,7 +89,9 @@ module.exports.logoutParent = async (req, res, next) => {
 module.exports.getParentProfile = async (req, res, next) => {
     try {
         const parent = await parentModel.findById(req.parent._id)
-            .populate('children');
+            .populate('children')
+            // .populate("pendingChildRequests")//mycode
+            ;
         console.log("getparprofile called at parent.controller.js");
         res.status(200).json({ parent });
     } catch (err) {
@@ -99,21 +101,113 @@ module.exports.getParentProfile = async (req, res, next) => {
 }
 
 
+// module.exports.sendChildRequest = async (req, res, next) => {
+//     try {
+//         const { userEmail } = req.body;
+//         const parentId = req.parent?._id; // Add optional chaining
+
+//         // console.log(" at controller.js");
+//         console.log("sendChildRequest called at parent.controller.js, child email="+userEmail+" parid="+parentId);
+
+//         // Check if parent is authenticated
+//         if (!parentId) {
+//             console.log("par not authenticated at parent.controller.js");
+//             return res.status(401).json({ message: 'Parent not authenticated' });
+//         }
+
+//         // Find user by email
+//         const user = await userModel.findOne({ email: userEmail });
+//         if (!user) {
+//             console.log("user not found with useremail="+userEmail);
+//             return res.status(404).json({ message: 'User not found' });
+//         }
+//         console.log("Found user at controller.js : ", user.fullname.firstname);
+
+//         // Check if user is already a child
+//         // as child can have ONLY ONE par
+//         if (user.parentId && user.parentId.toString() === parentId.toString()) {
+//             console.log(`${user.fullname.firstname} is already child of ${parentId} at parent.controller.js`);
+//             return res.status(400).json({ message: 'User is already your child' });
+//         }
+//         else if(user.parentId){
+//             console.log(`${user.fullname.firstname} can only have one par, and par is ${user.parentId?.fullname.firstname}`);
+//             return res.status(400).json({message:"User is already have a parent"});
+//         }
+
+//         // Check if request already exists
+//         const existingRequest = user.pendingParentRequests?.find(
+//             req => req.parentId.toString() === parentId.toString() && req.status === 'pending'
+//         );
+        
+//         if (existingRequest) {
+//             console.log("req already send to user");
+//             return res.status(400).json({ message: 'Request already sent to this user' });
+//         }
+
+//         const parent = await parentModel.findById(parentId);
+//         if (!parent) {
+//             return res.status(404).json({ message: 'Parent not found' });
+//         }
+
+//         // Add request to user
+//         console.log("user._id="+user._id);
+//         const userupdated=await userModel.findByIdAndUpdate(user._id, {
+//             $push: {
+//                 pendingParentRequests: {
+//                     parentId: parentId,
+//                     parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
+//                     status: 'pending'
+//                 }
+//             }
+//         });
+//         console.log("Updated user pending req list at parent.controller.js : ", userupdated.pendingParentRequests);
+
+//         // Add request to parent
+//         const updatedParent=await parentModel.findByIdAndUpdate(parentId, {
+//             $push: {
+//                 pendingChildRequests: {
+//                     userId: user._id,
+//                     userName: `${user.fullname.firstname} ${user.fullname.lastname}`,
+//                     status: 'pending'
+//                 }
+//             }
+//         });
+//         console.log("Updated parent child req at controller.js : ", updatedParent.pendingChildRequests);
+
+//         // Notify user via socket if online
+//         const { sendMessageToSocketId } = require('../socket');
+//         if (user.socketId) {
+//             sendMessageToSocketId(user.socketId, {
+//                 event: 'parent-request-received',
+//                 data: {
+//                     parentId: parentId,
+//                     parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
+//                     requestId: user.pendingParentRequests[user.pendingParentRequests.length - 1]._id
+//                 }
+//             });
+//         }
+
+//         res.status(200).json({ message: 'Child request sent successfully' });
+//     } catch (err) {
+//         console.error('Error in sendChildRequest:', err);
+//         res.status(500).json({ message: err.message });
+//     }
+// }
+
+// Update sendChildRequest function in parent.controller.js
 module.exports.sendChildRequest = async (req, res, next) => {
     try {
         const { userEmail } = req.body;
-        const parentId = req.parent?._id; // Add optional chaining
+        const parentId = req.parent?._id;
 
-        console.log("sendChildRequest called at controller.js");
-        console.log("at parent.controller.js, child email="+userEmail+" parid="+parentId);
+        console.log("sendChildRequest called at parent.controller.js, child email="+userEmail+" parid="+parentId);
 
-        // Check if parent is authenticated
         if (!parentId) {
             console.log("par not authenticated at parent.controller.js");
             return res.status(401).json({ message: 'Parent not authenticated' });
         }
 
-        // Find user by email
+        // FIX: Remove .populate("parent") - this field doesn't exist
         const user = await userModel.findOne({ email: userEmail });
         if (!user) {
             console.log("user not found with useremail="+userEmail);
@@ -125,6 +219,10 @@ module.exports.sendChildRequest = async (req, res, next) => {
         if (user.parentId && user.parentId.toString() === parentId.toString()) {
             console.log(`${user.fullname.firstname} is already child of ${parentId} at parent.controller.js`);
             return res.status(400).json({ message: 'User is already your child' });
+        }
+        else if(user.parentId){
+            console.log(`${user.fullname.firstname} can only have one par, and par is ${user.parentId}`);
+            return res.status(400).json({message:"User is already have a parent"});
         }
 
         // Check if request already exists
@@ -142,29 +240,46 @@ module.exports.sendChildRequest = async (req, res, next) => {
             return res.status(404).json({ message: 'Parent not found' });
         }
 
-        // Add request to user
-        const userupdated=await userModel.findByIdAndUpdate(user._id, {
-            $push: {
-                pendingParentRequests: {
-                    parentId: parentId,
-                    parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
-                    status: 'pending'
+        // Add request to user - with new: true to get updated document
+        const updatedUser = await userModel.findByIdAndUpdate(
+            user._id, 
+            {
+                $push: {
+                    pendingParentRequests: {
+                        parentId: parentId,
+                        parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
+                        status: 'pending',
+                        requestedAt: new Date()
+                    }
                 }
-            }
-        });
-        console.log("Updated user pending req list at controller.js : ", userupdated.pendingParentRequests);
+            },
+            { new: true }
+        );
+        
+        console.log("Updated user pending req list at parent.controller.js : ", updatedUser.pendingParentRequests);
 
-        // Add request to parent
-        const updatedParent=await parentModel.findByIdAndUpdate(parentId, {
-            $push: {
-                pendingChildRequests: {
-                    userId: user._id,
-                    userName: `${user.fullname.firstname} ${user.fullname.lastname}`,
-                    status: 'pending'
+        // Add request to parent - with new: true to get updated document
+        const updatedParent = await parentModel.findByIdAndUpdate(
+            parentId,
+            {
+                $push: {
+                    pendingChildRequests: {
+                        userId: user._id,
+                        userName: `${user.fullname.firstname} ${user.fullname.lastname}`,
+                        status: 'pending',
+                        requestedAt: new Date()
+                    }
                 }
-            }
-        });
+            },
+            { new: true }
+        );
+        
         console.log("Updated parent child req at controller.js : ", updatedParent.pendingChildRequests);
+
+        // Get the newly created request ID
+        const newRequest = updatedUser.pendingParentRequests.find(
+            req => req.parentId.toString() === parentId.toString()
+        );
 
         // Notify user via socket if online
         const { sendMessageToSocketId } = require('../socket');
@@ -174,19 +289,21 @@ module.exports.sendChildRequest = async (req, res, next) => {
                 data: {
                     parentId: parentId,
                     parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
-                    requestId: user.pendingParentRequests[user.pendingParentRequests.length - 1]._id
+                    requestId: newRequest ? newRequest._id : null,
+                    timestamp: new Date()
                 }
             });
         }
 
-        res.status(200).json({ message: 'Child request sent successfully' });
+        res.status(200).json({ 
+            message: 'Child request sent successfully',
+            requestId: newRequest ? newRequest._id : null
+        });
     } catch (err) {
         console.error('Error in sendChildRequest:', err);
         res.status(500).json({ message: err.message });
     }
 }
-
-
 
 module.exports.removeChild = async (req, res, next) => {
     try {

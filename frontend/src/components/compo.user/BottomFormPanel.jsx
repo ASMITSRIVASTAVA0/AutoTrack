@@ -17,19 +17,14 @@ const BottomFormPanel = ({
     return (
         <div className='relative z-10 flex flex-col justify-end h-full'>
             {/* Bottom Form Panel */}
+           
             <div className={`bg-white relative rounded-t-2xl sm:rounded-t-3xl shadow-2xl transition-all duration-300 ${
                 panelOpen ? 'max-h-[70vh]' : 'max-h-[50vh] sm:max-h-[40vh]'
             }`}>
-                {/* Close Button - Only show when panel is open */}
-                {panelOpen && (
-                    <div
-                        ref={panelCloseRef}
-                        onClick={() => setPanelOpen(false)}
-                        className='absolute top-3 right-3 sm:top-6 sm:right-6 z-30 cursor-pointer text-gray-600 hover:text-gray-800 transition-colors p-2'
-                    >
-                        <i className="ri-arrow-down-s-line text-2xl sm:text-3xl"></i>
-                    </div>
-                )}
+                 <div className="flex justify-center mb-4 sm:mb-6">
+                <div className="w-12 sm:w-16 h-1 sm:h-1.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 rounded-full"></div>
+            </div>
+                
 
                 <div className='p-4 sm:p-6'>
                     <div className='mb-4 sm:mb-6'>
@@ -73,6 +68,7 @@ const BottomFormPanel = ({
                         <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000'></div>
                         Find Trip
                     </button>
+                    <br/>
                 </div>
             </div>
         </div>

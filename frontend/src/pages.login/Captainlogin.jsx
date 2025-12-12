@@ -175,7 +175,9 @@ const CaptainLogin = () => {
       if (response.status === 200) {
         const data = response.data
         setCaptain(data.captain)
-        localStorage.setItem('token', data.token)
+        // localStorage.setItem('token', data.token)
+        localStorage.setItem('tokenCaptain', data.tokenCaptain)
+        
         navigate('/captain-home')
       }
     } catch (err) {

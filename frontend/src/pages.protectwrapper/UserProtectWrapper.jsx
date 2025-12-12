@@ -11,7 +11,7 @@ const UserProtectWrapper = ({ children }) => {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('tokenUser')
       
       if (!token) {
         navigate('/login')
@@ -38,7 +38,7 @@ const UserProtectWrapper = ({ children }) => {
         
       } catch (error) {
         console.error("Error fetching user profile", error)
-        localStorage.removeItem('token')
+        localStorage.removeItem('tokenUser')
         localStorage.removeItem('user')
         navigate('/login')
       } finally {

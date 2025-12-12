@@ -24,6 +24,9 @@ router.get('/profile', authMiddleware.authUser, userController.getUserProfile)
 
 router.get('/logout', authMiddleware.authUser, userController.logoutUser)
 
+// Add this route in user.routes.js
+router.delete('/remove-parent', authMiddleware.authUser, userController.removeParent);
 
+router.get('/get-parent', authMiddleware.authUser, userController.getParentDetails);
 
 module.exports = router;

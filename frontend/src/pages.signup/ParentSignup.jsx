@@ -211,7 +211,7 @@ const ParentSignup = () => {
       if (response.status === 201) {
         const data = response.data
         setParent(data.parent)
-        localStorage.setItem('token', data.token)
+        localStorage.setItem('tokenParent', data.tokenParent)
         navigate('/parent-home')
       }
     } catch (err) {

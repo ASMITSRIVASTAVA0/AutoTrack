@@ -6,7 +6,8 @@ import axios from 'axios'
 const ParentProtectWrapper = ({
     children
 }) => {
-    const token = localStorage.getItem('token')
+    // const token = localStorage.getItem('token')
+    const token = localStorage.getItem('tokenParent')
     const navigate = useNavigate()
     const { parent, setParent } = useContext(ParentDataContext)
     const [ isLoading, setIsLoading ] = useState(true)
@@ -31,7 +32,7 @@ const ParentProtectWrapper = ({
         })
             .catch(err => {
                 console.error('Error fetching parent profile:', err)
-                localStorage.removeItem('token')
+                localStorage.removeItem('tokenParent')
                 navigate('/parent-login')
             })
     }, [ token ])

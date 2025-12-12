@@ -69,7 +69,7 @@ const ParentRequestsPanel = ({
                                 </div>
                                 <div className='flex gap-2 sm:gap-3'>
                                     <button
-                                        onClick={() => acceptParentRequest(request.parentId)}
+                                        onClick={() => acceptParentRequest(request._id,request.parentId)}
                                         disabled={isLoadingRequests}
                                         className='flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-2 sm:py-3 rounded-lg sm:rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed'
                                     >
@@ -83,7 +83,7 @@ const ParentRequestsPanel = ({
                                         )}
                                     </button>
                                     <button
-                                        onClick={() => rejectParentRequest(request.parentId)}
+                                        onClick={() => rejectParentRequest(request._id,request.parentId)}
                                         disabled={isLoadingRequests}
                                         className='flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white py-2 sm:py-3 rounded-lg sm:rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 shadow-lg hover:shadow-red-500/25 disabled:opacity-50 disabled:cursor-not-allowed'
                                     >

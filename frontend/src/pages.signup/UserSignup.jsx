@@ -214,7 +214,7 @@ const UserSignup = () => {
       if (response.status === 201) {
         const data = response.data
         setUser(data.user)
-        localStorage.setItem('token', data.token)
+        localStorage.setItem('tokenUser', data.tokenUser)
         localStorage.setItem('user', JSON.stringify(data.user))  // Save user to localStorage
         
         navigate('/home')

@@ -10,7 +10,8 @@ const ParentLogout = () => {
   useEffect(() => {
     const logout = async () => {
       try {
-        const token = localStorage.getItem('token');
+        // const token = localStorage.getItem('token');
+        const token = localStorage.getItem('tokenParent');
         await axios.get(`${import.meta.env.VITE_BASE_URL}/parents/logout`, {
           headers: {
             Authorization: `Bearer ${token}`
@@ -19,7 +20,7 @@ const ParentLogout = () => {
       } catch (error) {
         console.error('Logout error:', error);
       } finally {
-        localStorage.removeItem('token');
+        localStorage.removeItem('tokenParent');
         localStorage.removeItem('parent');
         setParent(null);
         navigate('/parent-login');

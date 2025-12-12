@@ -30,11 +30,13 @@ module.exports.registerUser = async (req, res, next) => {
 
 
 
-    const token = user.generateAuthToken();
+    const tokenUser = user.generateAuthToken();
     console.log("user created successfully");
     console.log(user);
 
-    res.status(201).json({ token, user });
+    res.cookie('tokenUser', tokenUser);
+
+    res.status(201).json({ tokenUser, user });
 
 
 }
@@ -60,11 +62,22 @@ module.exports.loginUser = async (req, res, next) => {
         return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = user.generateAuthToken();
+    const tokenUser = user.generateAuthToken();
 
-    res.cookie('token', token);
+    res.cookie('tokenUser', tokenUser);
 
-    res.status(200).json({ token, user });
+    res.status(200).json({ tokenUser, user });
+}
+
+module.exports.logoutUser = async (req, res, next) => {
+    console.log("Logging out user req");
+    res.clearCookie('tokenUser');
+    const tokenUser = req.cookies.tokenUser || req.headers.authorization.split(' ')[ 1 ];
+
+    await blackListTokenModel.create({ tokenUser });
+
+    res.status(200).json({ message: 'Logged out' });
+
 }
 
 module.exports.getUserProfile = async (req, res, next) => {
@@ -73,13 +86,62 @@ module.exports.getUserProfile = async (req, res, next) => {
 
 }
 
-module.exports.logoutUser = async (req, res, next) => {
-    console.log("Logging out user req");
-    res.clearCookie('token');
-    const token = req.cookies.token || req.headers.authorization.split(' ')[ 1 ];
 
-    await blackListTokenModel.create({ token });
+module.exports.getParentDetails = async (req, res, next) => {
+    try {
+        const userId = req.user._id;//auth.middleware.js me req.user=user
+        
+        const user = await userModel.findById(userId);
+        
+        if (!user.parentId) {
+            return res.status(404).json({ message: 'No parent found' });
+        }
+        
+        // Get parent details
+        const parent = await parentModel.findById(user.parentId)
+            .select('fullname email createdAt');//return only these 3 attributes
+        
+        if (!parent) {
+            return res.status(404).json({ message: 'Parent not found' });
+        }
+        
+        res.status(200).json({ parent });
+    } catch (err) {
+        console.error('Error getting parent details at user.controller.js:', err);
+        res.status(500).json({ message: err.message });
+    }
+}
 
-    res.status(200).json({ message: 'Logged out' });
 
+module.exports.removeParent = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        
+        // Find user
+        const user = await userModel.findById(userId);
+        if (!user.parentId) {
+            return res.status(400).json({ message: 'No parent to remove' });
+        }
+        
+        const parentId = user.parentId;
+        
+        // Remove parent reference from user
+        user.parentId = null;
+        await user.save();
+        
+        // Remove user from parent's children list
+        await parentModel.findByIdAndUpdate(parentId, {
+            $pull: { children: userId }
+        });
+        
+        console.log(`removeparent called at userParent.controller.js, User ${user.fullname.firstname} removed parent ${parentId}`);
+        
+        res.status(200).json({ 
+            message: 'Parent removed successfully',
+            user: user
+        });
+    } catch (err) {
+        console.error('Error removing parent at user.controller.js:', err);
+        res.status(500).json({ message: err.message });
+    }
 }

@@ -41,7 +41,11 @@ const userSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'parent'
         },
-        parentName: String,
+        parentName: {
+            type: String,
+            default:"Unknown",
+
+        },
         requestedAt: {
             type: Date,
             default: Date.now

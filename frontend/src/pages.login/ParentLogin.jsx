@@ -171,7 +171,8 @@ const ParentLogin = () => {
       if (response.status === 200) {
         const data = response.data
         setParent(data.parent)
-        localStorage.setItem('token', data.token)
+        // localStorage.setItem('token', data.token)
+        localStorage.setItem('tokenParent', data.tokenParent)
         navigate('/parent-home')
       }
     } catch (err) {

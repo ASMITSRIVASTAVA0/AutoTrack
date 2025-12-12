@@ -34,9 +34,11 @@ module.exports.registerCaptain = async (req, res, next) => {
         vehicleType: vehicle.vehicleType
     });
 
-    const token = captain.generateAuthToken();
+    const tokenCaptain = captain.generateAuthToken();
 
-    res.status(201).json({ token, captain });
+    res.cookie('tokenCaptain', tokenCaptain);
+
+    res.status(201).json({ tokenCaptain, captain });
 
 }
 
@@ -60,11 +62,11 @@ module.exports.loginCaptain = async (req, res, next) => {
         return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = captain.generateAuthToken();
+    const tokenCaptain = captain.generateAuthToken();
 
-    res.cookie('token', token);
+    res.cookie('tokenCaptain', tokenCaptain);
 
-    res.status(200).json({ token, captain });
+    res.status(200).json({ tokenCaptain, captain });
 }
 
 module.exports.getCaptainProfile = async (req, res, next) => {
@@ -72,11 +74,11 @@ module.exports.getCaptainProfile = async (req, res, next) => {
 }
 
 module.exports.logoutCaptain = async (req, res, next) => {
-    const token = req.cookies.token || req.headers.authorization?.split(' ')[ 1 ];
+    const tokenCaptain = req.cookies.tokenCaptain || req.headers.authorization?.split(' ')[ 1 ];
 
-    await blackListTokenModel.create({ token });
+    await blackListTokenModel.create({ tokenCaptain });
 
-    res.clearCookie('token');
+    res.clearCookie('tokenCaptain');
 
     res.status(200).json({ message: 'Logout successfully' });
 }

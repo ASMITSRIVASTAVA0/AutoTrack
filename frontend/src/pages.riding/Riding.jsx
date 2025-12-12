@@ -102,90 +102,16 @@ const Riding = () => {
                 <i className="text-xl text-gray-300 font-medium ri-home-5-line"></i>
             </Link>
             
-            {/* Top Stats Bar */}
-            <div className='absolute top-4 left-4 z-10 bg-gray-800/90 backdrop-blur-sm p-3 rounded-xl border border-gray-700 shadow-lg'>
-                <div className='flex items-center gap-4'>
-                    <div className='text-center'>
-                        <p className='text-xs text-gray-400'>Ride Time</p>
-                        <p className='text-lg font-bold text-emerald-400'>{formatDuration(rideDuration)}</p>
-                    </div>
-                    <div className='h-8 w-px bg-gray-700'></div>
-                    <div className='text-center'>
-                        <p className='text-xs text-gray-400'>Distance</p>
-                        <p className='text-lg font-bold text-emerald-400'>{remainingDistance}</p>
-                    </div>
-                    <div className='h-8 w-px bg-gray-700'></div>
-                    <div className='text-center'>
-                        <p className='text-xs text-gray-400'>Arrival</p>
-                        <p className='text-lg font-bold text-emerald-400'>{estimatedArrival}</p>
-                    </div>
-                </div>
-            </div>
-            
+           
             {/* Live Tracking Map */}
             <div className='h-1/2 relative'>
                 <LiveTracking />
-                {/* Map Overlay Controls */}
-                <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900/80 backdrop-blur-sm p-3 rounded-xl border border-gray-700'>
-                    <div className='flex items-center gap-4'>
-                        <button className='w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center border border-gray-700 hover:bg-gray-700 transition-colors'>
-                            <i className="ri-navigation-fill text-gray-300"></i>
-                        </button>
-                        <button className='w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center border border-gray-700 hover:bg-gray-700 transition-colors'>
-                            <i className="ri-volume-up-line text-gray-300"></i>
-                        </button>
-                        <button className='w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center border border-gray-700 hover:bg-gray-700 transition-colors'>
-                            <i className="ri-fullscreen-fill text-gray-300"></i>
-                        </button>
-                    </div>
-                </div>
+                
             </div>
             
             {/* Ride Details Panel */}
             <div className='h-1/2 p-6 bg-gray-800 rounded-t-3xl shadow-2xl border-t border-gray-700'>
-                {/* Driver & Vehicle Info */}
-                <div className='flex items-center justify-between mb-6'>
-                    <div className='flex items-center gap-4'>
-                        <div className='relative'>
-                            <img 
-                                className='h-16 w-20 object-cover rounded-xl border-2 border-emerald-500/50 shadow-lg' 
-                                src={getVehicleImage()} 
-                                alt="Vehicle" 
-                            />
-                            <div className='absolute -bottom-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center animate-pulse'>
-                                <i className="ri-pulse-line text-sm text-gray-900"></i>
-                            </div>
-                        </div>
-                        <div>
-                            <div className='flex items-center gap-2'>
-                                <div className='w-10 h-10 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center'>
-                                    <i className="ri-user-3-fill text-gray-900"></i>
-                                </div>
-                                <div>
-                                    <h2 className='text-lg font-bold text-gray-100 capitalize'>
-                                        {captainFirstName} {captainLastName}
-                                    </h2>
-                                    <div className='flex items-center gap-2 mt-1'>
-                                        <span className='text-xs text-emerald-400 bg-emerald-900/30 px-2 py-1 rounded-full'>4.8 ★</span>
-                                        <span className='text-xs text-gray-400'>• {vehiclePlate}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className='text-right'>
-                        <div className='flex flex-col items-end gap-2'>
-                            <div className='bg-gray-900/70 px-3 py-2 rounded-lg border border-gray-700'>
-                                <p className='text-xs text-gray-400'>Vehicle</p>
-                                <p className='text-sm font-semibold text-gray-300'>{vehicleColor} {vehicleType}</p>
-                            </div>
-                            <button className='w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center border border-gray-700 hover:bg-gray-800 transition-colors'>
-                                <i className="ri-phone-line text-gray-300"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                
 
                 {/* Trip Details */}
                 <div className='space-y-4 mb-6'>
@@ -225,50 +151,21 @@ const Riding = () => {
                         </div>
                     </div>
 
-                    <div className='flex items-center gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700'>
-                        <div className='w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center border border-gray-700'>
-                            <i className="ri-currency-line text-gray-400 text-xl"></i>
-                        </div>
-                        <div className='flex-1'>
-                            <h3 className='text-base font-medium text-gray-300'>Trip Fare</h3>
-                            <p className='text-2xl font-bold mt-1 text-emerald-400'>₹{fare}</p>
-                            <p className='text-xs text-gray-500 mt-1'>Payable at destination</p>
-                        </div>
-                        <div className='text-right'>
-                            <div className='text-xs text-gray-400 bg-gray-900/50 px-3 py-2 rounded-lg border border-gray-700'>
-                                Cash Payment
-                            </div>
-                        </div>
-                    </div>
+             
                 </div>
                 
                 {/* Action Buttons */}
-                <div className='flex gap-3'>
-                    <button className='flex-1 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 text-gray-300 font-medium p-4 rounded-xl border border-gray-700 transition-all duration-300 flex items-center justify-center gap-2'>
+                <div className='flex gap-3 text-black'>
+                    <button 
+                    className='flex-1 text-black  bg-white hover:bg-gray-200 text-black font-medium p-4 rounded-xl border border-gray-700 transition-all duration-300 flex items-center justify-center gap-2'
+                    >
                         <i className="ri-chat-1-line"></i>
-                        Message Driver
+                        Message Driver Parent
                     </button>
-                    <button className='flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold p-4 rounded-xl shadow-lg shadow-emerald-500/25 transition-all duration-300 flex items-center justify-center gap-2'>
-                        <i className="ri-bank-card-line"></i>
-                        Pay ₹{fare}
-                    </button>
+                    
                 </div>
 
-                {/* Ride Status Footer */}
-                <div className='mt-6 p-4 bg-gray-900/50 rounded-xl border border-gray-700'>
-                    <div className='flex items-center justify-between'>
-                        <div className='flex items-center gap-3'>
-                            <div className='w-3 h-3 bg-emerald-400 rounded-full animate-pulse'></div>
-                            <div>
-                                <p className='text-sm text-emerald-400 font-medium'>Ride in progress</p>
-                                <p className='text-xs text-gray-500 mt-1'>You'll reach in {estimatedArrival}</p>
-                            </div>
-                        </div>
-                        <div className='text-right'>
-                            <p className='text-xs text-gray-400'>Ride ID: <span className='text-emerald-400'>{ride._id?.slice(-8) || 'N/A'}</span></p>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
         </div>
     )

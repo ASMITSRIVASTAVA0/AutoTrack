@@ -314,24 +314,28 @@ function initializeSocket(server) {//server is http server defined in server.js
         });
 
         // Handle parent request rejection
+        // In socket.js, update the parent-request-rejected handler:
         socket.on('parent-request-rejected', async (data) => {
             try {
+                console.log('Parent request rejection received via socket:', data);
                 const { parentId, userId, userName } = data;
                 const parent = await parentModel.findById(parentId);
 
                 if (parent && parent.socketId) {
+                    console.log(`Emitting parent-request-rejected-notification to parent ${parent._id}`);
                     io.to(parent.socketId).emit('parent-request-rejected-notification', {
                         userId: userId,
                         userName: userName,
                         timestamp: new Date()
                     });
                     console.log(`Parent ${parent.fullname.firstname} notified of request rejection at socket.js`);
+                } else {
+                    console.log(`Parent ${parentId} not found or not connected`);
                 }
             } catch (err) {
                 console.error('Error notifying parent of request rejection at socket.js:', err);
             }
         });
-
         // Handle user response to parent request
         socket.on('parent-request-response', async (data) => {
             try {
