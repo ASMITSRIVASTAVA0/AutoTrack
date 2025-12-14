@@ -29,8 +29,7 @@ const ParentProtectWrapper = ({
                 setParent(response.data.parent)
                 setIsLoading(false)
             }
-        })
-            .catch(err => {
+        }).catch(err => {
                 console.error('Error fetching parent profile:', err)
                 localStorage.removeItem('tokenParent')
                 navigate('/parent-login')

@@ -1,5 +1,5 @@
 import React from 'react';
-import CaptainDetails from '../CaptainDetails';
+import CaptainDetails from '../compo.captain/CaptainDetails';
 
 const CaptainProfile = ({ stats }) => {
     return (

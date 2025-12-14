@@ -52,13 +52,12 @@ import { UserDataContext } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 
 // Lazy load components for better performance
-const LiveTracking = lazy(() => import('../components/LiveTracking'));
-const LiveTrackingStatic = lazy(() => import("../pages.startup/LiveTrackingStatic"));
-const LocationSearchPanel = lazy(() => import('../components/LocationSearchPanel'));
-const VehiclePanel = lazy(() => import('../components/VehiclePanel'));
-const ConfirmRide = lazy(() => import('../components/ConfirmRide'));
-const LookingForDriver = lazy(() => import('../components/LookingForDriver'));
-const WaitingForDriver = lazy(() => import('../components/WaitingForDriver'));
+const LiveTracking = lazy(() => import('../pages.riding/LiveTracking'));
+const LiveTrackingStatic = lazy(() => import("../pages.riding/LiveTrackingStatic"));
+const VehiclePanel = lazy(() => import('../components/compo.user/VehiclePanel'));
+const ConfirmRide = lazy(() => import('../components/compo.captain/ConfirmRide'));
+const LookingForDriver = lazy(() => import('../components/compo.user/LookingForDriver'));
+const WaitingForDriver = lazy(() => import('../components/compo.user/WaitingForDriver'));
 
 const NotificationToast = lazy(() => import('../components/compo.notification/NotificationToast'));
 const ParentRequestsPanel = lazy(() => import('../components/compo.user/ParentRequestsPanel'));
@@ -179,8 +178,20 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
 
         const handleParentRequestReceived = (data) => {
             console.log('Parent request received:', data);
+
+            // Check if request already exists to prevent duplicates
+            const existingRequest = parentRequests.find(req => 
+                req._id === data.requestId || 
+                (req.parentId === data.parentId && req.status === 'pending')
+            );
+            
+            if (existingRequest) {
+                console.log('Duplicate parent request received, ignoring');
+                return;
+            }
+
             const newRequest = {
-                id: data.requestId || Date.now(),
+                _id: data.requestId || Date.now(),
                 parentId: data.parentId,
                 parentName: data.parentName,
                 timestamp: new Date(data.timestamp || Date.now()),
@@ -275,6 +286,11 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             
             console.log("Accepting request:", requestId, "for parent:", parentId);
             
+            if (!requestId) {
+                addNotification('Invalid request ID', 'error');
+                return;
+            }
+            
             const response = await axios.post(
                 `${import.meta.env.VITE_BASE_URL}/user-parents/accept-parent-request/${requestId}`,
                 { parentId },
@@ -324,12 +340,6 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             // Remove the rejected request from state
             setParentRequests(prev => prev.filter(req => req._id !== requestId));
             
-            // ✅ FIX: REMOVE this socket emission - backend will handle it
-            // socket.emit('parent-request-rejected', {
-            //     parentId: parentId,
-            //     userId: user._id,
-            //     userName: `${user.fullname.firstname} ${user.fullname.lastname}`
-            // });
             
             addNotification('Parent request rejected successfully.', 'info');
             
@@ -433,8 +443,8 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
 
     const submitHandler = (e) => {
         e.preventDefault();
-        console.log("pickup", pickup);
-        console.log("destination", destination);
+        // console.log("pickup", pickup);
+        // console.log("destination", destination);
     };
 
     // GSAP animations
@@ -962,22 +972,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
                 </Suspense>
             </div>
 
-            {/* Location Search Panel (when activeField is set) */}
-            {activeField && (
-                <Suspense fallback={
-                    <div className="fixed inset-0 z-40 bg-white flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                    </div>
-                }>
-                    <LocationSearchPanel
-                        setPickup={setPickup}
-                        setDestination={setDestination}
-                        activeField={activeField}
-                        setActiveField={setActiveField}
-                        setPanelOpen={setPanelOpen}
-                    />
-                </Suspense>
-            )}
+      
         </div>
     );
 };

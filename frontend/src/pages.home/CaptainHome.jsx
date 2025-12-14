@@ -3,20 +3,20 @@ import React, { useRef, useState, useEffect, useContext, lazy, Suspense } from '
 import { Link, useNavigate } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
-import ConfirmRidePopUp from '../components/ConfirmRidePopUp'
+import ConfirmRidePopUp from '../components/compo.captain/ConfirmRidePopUp'
 import { SocketContext } from '../context/SocketContext'
 import { CaptainDataContext } from '../context/CaptainContext'
 import axios from 'axios'
 
 // Lazy load components for better performance
-import LiveTracking from '../components/LiveTracking';
-import RidePopUp from '../components/RidePopUp';
+import LiveTracking from '../pages.riding/LiveTracking';
+import RidePopUp from '../components/compo.captain/RidePopUp';
 
-import CaptainProfile from '../components/compo.captain/CaptainProfile';
-import RideHistory from '../components/compo.captain/RideHistory';
-import Earnings from '../components/compo.captain/Earnings';
-import  Support from '../components/compo.captain/Support';
-import CaptainDetails from '../components/CaptainDetails';
+import CaptainProfile from '../components/compo.captain.info/CaptainProfile';
+import RideHistory from '../components/compo.captain.info/RideHistory';
+import Earnings from '../components/compo.captain.info/Earnings';
+import  Support from '../components/compo.captain.info/Support';
+import CaptainDetails from '../components/compo.captain/CaptainDetails';
 
 const CaptainHome = () => {
     const [mounted, setMounted] = useState(false)

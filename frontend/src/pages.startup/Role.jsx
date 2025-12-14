@@ -133,10 +133,7 @@ const Role = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
-  const handleRoleClick = (role) => {
-    console.log(`Navigating to ${role} login...`)
-    // Navigation logic: navigate to '/captain-login', '/login', or '/parent-login'
-  }
+
 
   const handleBackClick = () => {
     console.log('Navigating back to home...')
@@ -213,27 +210,6 @@ const Role = () => {
             transform: mounted ? 'translateY(0)' : 'translateY(-40px)'
           }}
         >
-          {/* <div className='inline-flex items-center gap-3 bg-gradient-to-r from-zinc-900/80 to-zinc-800/80 backdrop-blur-xl px-5 py-3 rounded-2xl border border-zinc-700/50 shadow-2xl mb-6'>
-            <div className='relative w-10 h-10 bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg'>
-              <div className='absolute inset-0 bg-gradient-to-br from-red-400 to-orange-400 rounded-xl blur opacity-50'></div>
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className='relative w-6 h-6 text-white'>
-                <path d="M12 2C7.58 2 4 5.58 4 10c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" fill="currentColor"/>
-              </svg>
-            </div>
-            <span className='text-white font-bold text-xl tracking-tight'>AutoTrack</span>
-          </div> */}
-          {/* <div className='group inline-flex items-center gap-3 bg-gradient-to-r from-zinc-900/80 to-zinc-800/80 backdrop-blur-xl px-5 py-3 rounded-2xl border border-zinc-700/50 shadow-2xl hover:shadow-red-500/20 transition-all duration-500 hover:scale-105 hover:-translate-y-1 cursor-pointer'>
-            <div className='relative w-11 h-11 bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-red-500/60 transition-all duration-500 group-hover:rotate-12 group-hover:scale-110'>
-              <div className='absolute inset-0 bg-gradient-to-br from-red-400 to-orange-400 rounded-xl blur opacity-50 group-hover:opacity-100 transition-opacity duration-500'></div>
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className='relative w-6 h-6 text-white'>
-                <path d="M12 2C7.58 2 4 5.58 4 10c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" fill="currentColor"/>
-              </svg>
-            </div>
-            <span className='text-white font-bold text-xl sm:text-2xl tracking-tight'>AutoTrack</span>
-            <div className='ml-2 px-2 py-1 bg-red-500/20 rounded-lg border border-red-500/30'>
-              <span className='text-red-400 text-xs font-semibold'>FREE</span>
-            </div>
-          </div> */}
           <h1 className='text-4xl sm:text-4xl md:text-5xl font-bold text-white mb-3 leading-tight'>
             
             <span className='block bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent mt-1 animate-pulse'>
@@ -243,11 +219,6 @@ const Role = () => {
           <p className='text-lg sm:text-xl text-zinc-400'>Select how you want to use AutoTrack</p>
         </div>
 
-        {/* Cards Container */}
-        {/* <Link 
-          to='/captain-login'
-          className='group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 p-1 shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 transform hover:scale-105'
-        > */}
         <div 
           className='grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 w-full max-w-6xl mb-12 transition-all duration-1000 ease-out delay-300'
           style={{

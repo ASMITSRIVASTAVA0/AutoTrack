@@ -87,7 +87,7 @@ import gsap from 'gsap'
 
 // Lazy load components
 const FinishRide = lazy(() => import('../pages.riding/FinishRide'))
-const LiveTracking = lazy(() => import('../components/LiveTracking'))
+const LiveTracking = lazy(() => import('./LiveTracking'))
 
 const CaptainRiding = () => {
     const [finishRidePanel, setFinishRidePanel] = useState(false)

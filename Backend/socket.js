@@ -275,7 +275,7 @@ function initializeSocket(server) {//server is http server defined in server.js
         // Handle parent request to user
         socket.on('parent-request-sent', async (data) => {
             try {
-                const { userEmail, parentId } = data;
+                const { userEmail, parentId, requestId } = data;
                 const user = await userModel.findOne({ email: userEmail });
                 const parent = await parentModel.findById(parentId);
 
@@ -284,6 +284,7 @@ function initializeSocket(server) {//server is http server defined in server.js
                     io.to(user.socketId).emit('parent-request-received', {
                         parentId: parentId,
                         parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
+                        requestId:requestId,
                         timestamp: new Date()
                     });
                 } else {

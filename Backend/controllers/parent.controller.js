@@ -278,22 +278,27 @@ module.exports.sendChildRequest = async (req, res, next) => {
 
         // Get the newly created request ID
         const newRequest = updatedUser.pendingParentRequests.find(
-            req => req.parentId.toString() === parentId.toString()
+            req => req.parentId.toString() === parentId.toString() &&req.status==="pending"
         );
 
-        // Notify user via socket if online
-        const { sendMessageToSocketId } = require('../socket');
-        if (user.socketId) {
-            sendMessageToSocketId(user.socketId, {
-                event: 'parent-request-received',
-                data: {
-                    parentId: parentId,
-                    parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
-                    requestId: newRequest ? newRequest._id : null,
-                    timestamp: new Date()
-                }
-            });
+        if(!newRequest){
+            console.log("newreqid not found at parent.controller.js");
         }
+
+        // Notify user via socket if online
+        // const { sendMessageToSocketId } = require('../socket');
+        // if (user.socketId) {
+        //     console.log("user connected to socket, notififying him");
+        //     sendMessageToSocketId(user.socketId, {
+        //         event: 'parent-request-received',
+        //         data: {
+        //             parentId: parentId,
+        //             parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
+        //             requestId: newRequest ? newRequest._id : null,
+        //             timestamp: new Date()
+        //         }
+        //     });
+        // }
 
         res.status(200).json({ 
             message: 'Child request sent successfully',

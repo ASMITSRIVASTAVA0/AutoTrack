@@ -251,25 +251,7 @@ const ParentLogin = () => {
       <div className='relative z-30 min-h-screen flex flex-col justify-between p-6 sm:p-8'>
         <div className='max-w-md mx-auto w-full flex-1 flex flex-col justify-center'>
           
-          {/* Logo */}
-          <div 
-            className='mb-8 transition-all duration-1000 ease-out'
-            style={{
-              opacity: mounted ? 1 : 0,
-              transform: mounted ? 'translateY(0)' : 'translateY(-30px)'
-            }}
-          >
-            <div className='inline-flex items-center gap-3 bg-gradient-to-r from-zinc-900/80 to-zinc-800/80 backdrop-blur-xl px-5 py-3 rounded-2xl border border-zinc-700/50 shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-105 cursor-pointer'>
-              <div className='relative w-11 h-11 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg'>
-                <div className='absolute inset-0 bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl blur opacity-50'></div>
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className='relative w-6 h-6 text-white'>
-                  <path d="M12 2C7.58 2 4 5.58 4 10c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" fill="currentColor"/>
-                </svg>
-              </div>
-              <span className='text-white font-bold text-xl tracking-tight'>AutoTrack</span>
-            </div>
-          </div>
-
+          
           {/* Header */}
           <div 
             className='mb-8 transition-all duration-1000 ease-out delay-200'
@@ -425,23 +407,7 @@ const ParentLogin = () => {
           </div>
         </div>
 
-        {/* Footer */}
-        <div 
-          className='max-w-md mx-auto w-full text-center pt-8 transition-all duration-1000 ease-out delay-700'
-          style={{
-            opacity: mounted ? 1 : 0
-          }}
-        >
-          <div className='bg-zinc-900/30 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-4'>
-            <p className='text-xs text-zinc-500 leading-relaxed'>
-              This site is protected by reCAPTCHA and the{' '}
-              <span className='text-zinc-400 underline hover:text-zinc-300 cursor-pointer transition-colors'>Google Privacy Policy</span>
-              {' '}and{' '}
-              <span className='text-zinc-400 underline hover:text-zinc-300 cursor-pointer transition-colors'>Terms of Service</span>
-              {' '}apply.
-            </p>
-          </div>
-        </div>
+        
       </div>
     </div>
   )

@@ -2,6 +2,10 @@ const userModel = require('../models/user.model');
 const parentModel = require('../models/parent.model');
 const { validationResult } = require('express-validator');
 
+
+//ADD THESE TO user.controller.js later======================================
+
+
 module.exports.getPendingParentRequests = async (req, res, next) => {
     try {
         const userId = req.user._id;
@@ -100,62 +104,6 @@ module.exports.acceptParentRequest = async (req, res, next) => {
     }
 }
 
-// module.exports.rejectParentRequest = async (req, res, next) => {
-//     try {
-//         console.log("rejectParentRequest called at userParent.controller.js");
-//         const { requestId } = req.params;
-//         const { parentId } = req.body; // Get parentId from body
-//         const userId = req.user._id;
-
-//         console.log(`Params: requestId=${requestId}, body parentId=${parentId}, userId=${userId}`);
-
-//         // Find user to get the request details
-//         const user = await userModel.findById(userId);
-//         const request = user.pendingParentRequests.id(requestId);
-        
-//         if (!request) {
-//             console.log("Request not found");
-//             return res.status(404).json({ message: 'Request not found' });
-//         }
-
-//         // Use parentId from request if not provided in body
-//         const actualParentId = parentId || request.parentId;
-
-        
-//         // Remove request from user
-//         const updatedUser=await userModel.findByIdAndUpdate(
-//             userId, 
-//             {
-//                 $pull: { pendingParentRequests: { _id: requestId } }
-//             }
-//         );
-
-//         // Remove request from parent
-//         const updatedParent=await parentModel.findByIdAndUpdate(
-//             actualParentId,
-//             {
-//                 $pull: { 
-//                     pendingChildRequests: { 
-//                         userId: userId,
-//                         status: 'pending'
-//                     } 
-//                 }
-//             }
-//         );
-
-//         console.log(`Rejecting request by user=${updatedUser.fullname.firstname} for par=${updatedParent.fullname.firstname}, user pendingparreq=${updatedUser.pend} par pendingchindreq=${updatedParent.pendingChildRequests} requestId=${requestId}`);
-
-
-//         res.status(200).json({ 
-//             message: 'Parent request rejected successfully',
-//             parentId: actualParentId 
-//         });
-//     } catch (err) {
-//         console.error('Error rejecting parent request:', err);
-//         res.status(500).json({ message: err.message });
-//     }
-// }
-
 module.exports.rejectParentRequest = async (req, res, next) => {
     try {
         console.log("rejectParentRequest called at userParent.controller.js");
@@ -165,12 +113,18 @@ module.exports.rejectParentRequest = async (req, res, next) => {
 
         console.log(`Params: requestId=${requestId}, body parentId=${parentId}, userId=${userId}`);
 
+        // VALIDATION: Check if requestId exists
+        if (!requestId || requestId === 'undefined') {
+            console.log("Invalid requestId:", requestId);
+            return res.status(400).json({ message: 'Invalid request ID' });
+        }
+
         // Find user to get the request details
         const user = await userModel.findById(userId);
         const request = user.pendingParentRequests.id(requestId);
         
         if (!request) {
-            console.log("Request not found");
+            console.log("Request not found at userParent.controller.js");
             return res.status(404).json({ message: 'Request not found' });
         }
 

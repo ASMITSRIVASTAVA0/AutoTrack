@@ -8,29 +8,73 @@ const RoutePreloader = () => {
       
       try {
         // Preload based on current route
-        if (currentPath === '/' || currentPath === '/role') {
+        if (currentPath === '/' ){
+          await Promise.all([
+            import("../pages.startup/Role"),
+            import("../pages.other/PrivaryPolicy.jsx"),
+            import("../pages.other/TermsOfService.jsx"),
+            import("../pages.riding/LiveTrackingStatic.jsx"),
+          ]);
+          console.log("at RoutePreloader.jsx, loaded /role,privarypolicy,termsofservice");
+        }
+        else if (currentPath === '/role') {
           // Preload login components
           await Promise.all([
             import('../pages.login/UserLogin'),
             import('../pages.login/Captainlogin'),
             import('../pages.login/ParentLogin')
           ]);
-        } else if (currentPath.includes('/login')) {
+          console.log("at RoutePreloader.jsx, loaded /UserLogin,CaptainLogin,ParentLogin");
+        } 
+        else if(currentPath==="/captain-login"){
+          await Promise.all([
+            import("../pages.signup/CaptainSignup.jsx"),
+            import("../pages.home/CaptainHome.jsx"),
+            import("../pages.riding/CaptainRiding.jsx")
+          ]);
+          console.log("at captain-login, loaded signup,home,riding");
+        }
+        else if(currentPath==="/login"){
+          await Promise.all([
+            import("../pages.signup/UserSignup.jsx"),
+            import("../pages.home/Home.jsx"),
+            import("../pages.riding/Riding.jsx")
+
+          ]);
+          console.log("at captain-login, loaded signup,home,riding");
+        }
+        else if (currentPath.includes('/login')) {
           // Preload signup components
           await Promise.all([
             import('../pages.signup/UserSignup'),
             import('../pages.signup/CaptainSignup'),
-            import('../pages.signup/ParentSignup')
+            import('../pages.signup/ParentSignup'),
+
+            import("../pages.home/CaptainHome"),
+            import("../pages.home/Home"),
+            import("../pages.home/ParentHome"),
+
+            import("../pages.protectwrapper/CaptainProtectWrapper"),
+            import("../pages.protectwrapper/ParentProtectWrapper"),
+            import("../pages.protectwrapper/UserProtectWrapper")
           ]);
+
+          console.log("at RoutePreloader.jsx, loaded signup,home,protectedwrapper ");
+            
         } else if (currentPath === '/home' || currentPath === '/captain-home' || currentPath === '/parent-home') {
           // Preload riding and logout components
           await Promise.all([
-            import('../pages.riding/Riding'),
             import('../pages.riding/CaptainRiding'),
+            import("../pages.riding/FinishRide.jsx"),
+            import('../pages.riding/Riding'),
+
+
             import('../pages.logout/UserLogout'),
             import('../pages.logout/CaptainLogout'),
             import('../pages.logout/ParentLogout')
           ]);
+          console.log("at RoutePreloader.jsx, loaded riding,logout");
+            
         }
       } catch (error) {
         console.warn('Preloading failed:', error);
@@ -61,11 +105,13 @@ const RoutePreloader = () => {
         link.as = 'document';
         document.head.appendChild(link);
       });
+      console.log("at routePreloader.jsx, addLinkPrefetch func, document head children="+document.head.children);
     };
     
     preloadComponents();
     addLinkPrefetch();
     
+
     // Cleanup function
     return () => {
       // Remove any prefetch links we added

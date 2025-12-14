@@ -49,7 +49,7 @@
 // export default CaptainDetails
 
 import React, { useContext, useState, useEffect } from 'react';
-import { CaptainDataContext } from '../context/CaptainContext'
+import { CaptainDataContext } from '../../context/CaptainContext'
 
 
 // ==================== CAPTAIN DETAILS ====================

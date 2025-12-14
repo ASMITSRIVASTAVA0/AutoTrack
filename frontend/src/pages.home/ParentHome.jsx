@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -67,14 +67,12 @@ function MapUpdater({ center, zoom }) {
 
 const ParentHome = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  
   const [children, setChildren] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [rideHistory, setRideHistory] = useState([]);
   const [childStats, setChildStats] = useState({});
-  
   const [userEmail, setUserEmail] = useState('');
   const [childLocation, setChildLocation] = useState(null);
   const [currentRide, setCurrentRide] = useState(null);
@@ -89,6 +87,11 @@ const ParentHome = () => {
   const { socket } = useContext(SocketContext);
   const { parent } = useContext(ParentDataContext);
   const mapRef = useRef();
+  
+  // New refs to track mounted state and prevent duplicate logs
+  const isMounted = useRef(false);
+  const hasJoined = useRef(false);
+  const isLoadingData = useRef(false);
 
   // Track mouse movement for parallax effect
   useEffect(() => {
@@ -99,10 +102,12 @@ const ParentHome = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Load parent data on component mount
-  // Update the loadParentData function in ParentHome.jsx
-const loadParentData = async () => {
+  // Load parent data on component mount - optimized with useCallback
+  const loadParentData = useCallback(async () => {
+    if (isLoadingData.current) return; // Prevent concurrent calls
+    
     try {
+      isLoadingData.current = true;
       setIsLoading(true);
       const token = localStorage.getItem('tokenParent');
       
@@ -143,12 +148,13 @@ const loadParentData = async () => {
       addNotification('Error loading parent data: ' + (error.response?.data?.message || error.message), 'error');
     } finally {
       setIsLoading(false);
+      isLoadingData.current = false;
     }
-};
+  }, []);
+
   // Load ride history for a child
   const loadRideHistory = async (childId) => {
     try {
-      // const token = localStorage.getItem('token');
       const token = localStorage.getItem('tokenParent');
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/parents/child-rides/${childId}`,
@@ -167,7 +173,6 @@ const loadParentData = async () => {
   // Load child statistics
   const loadChildStats = async (childId) => {
     try {
-      // const token = localStorage.getItem('token');
       const token = localStorage.getItem('tokenParent');
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/parents/child-stats/${childId}`,
@@ -184,109 +189,6 @@ const loadParentData = async () => {
       console.error('Error loading child stats:', error);
     }
   };
-
-  // Enhanced socket implementation with animations
-  useEffect(() => {
-    if (!parent || !socket) return;
-
-    socket.emit('parent-join', parent._id);
-
-    const handleChildLocationUpdate = (data) => {
-      console.log('Child location updated:', data);
-      if (selectedChild && data.userId === selectedChild._id) {
-        setChildLocation(data.location);
-        setMapCenter([data.location.coordinates[1], data.location.coordinates[0]]);
-        addNotification(`${data.userName}'s location updated`, 'info');
-      }
-    };
-
-    const handleCaptainLocationUpdate = (data) => {
-      console.log('Captain location updated:', data);
-      if (selectedChild && data.childId === selectedChild._id) {
-        setCaptainLocation(data.location);
-        // Add location pulse effect
-        setPulseAnimation(true);
-        setTimeout(() => setPulseAnimation(false), 1000);
-      }
-    };
-
-    const handleChildRideStarted = (data) => {
-      console.log('Child ride started:', data);
-      if (data.childId === selectedChild?._id) {
-        setCurrentRide(data.ride);
-        addNotification(`🚗 Ride started for ${data.childName}`, 'success');
-        loadRideHistory(data.childId);
-      }
-    };
-
-    const handleChildRideOngoing = (data) => {
-      console.log('Child ride ongoing:', data);
-      if (data.childId === selectedChild?._id) {
-        addNotification(`Ride ongoing for ${data.childName} with captain ${data.captain.name}`, 'info');
-      }
-    };
-
-    const handleChildRideEnded = (data) => {
-      console.log('Child ride ended:', data);
-      if (data.childId === selectedChild?._id) {
-        setCurrentRide(null);
-        setCaptainLocation(null);
-        addNotification(`Ride completed for ${data.childName}. Fare: ₹${data.fare}`, 'success');
-        loadRideHistory(data.childId);
-        if (selectedChild?._id) {
-          loadChildStats(selectedChild._id);
-        }
-      }
-    };
-
-    const handleRideAcceptedNotification = (notification) => {
-      console.log('Ride accepted notification:', notification);
-      addNotification(notification.message, 'success');
-    };
-
-    const handleParentRequestAccepted = (data) => {
-      console.log('Parent request accepted:', data);
-      addNotification(`${data.userName} accepted your parent request!`, 'success');
-      loadParentData();
-    };
-
-    const handleParentRequestRejected = (data) => {
-      console.log('Parent request rejected:', data);
-      addNotification(`${data.userName} rejected your parent request.`, 'error');
-    };
-
-    const handleSocketError = (error) => {
-      console.error('Socket error:', error);
-      addNotification('Connection error. Please check your internet.', 'error');
-    };
-
-    // Register event listeners
-    socket.on('child-location-updated', handleChildLocationUpdate);
-    socket.on('captain-location-update', handleCaptainLocationUpdate);
-    socket.on('child-ride-started', handleChildRideStarted);
-    socket.on('child-ride-ongoing', handleChildRideOngoing);
-    socket.on('child-ride-ended', handleChildRideEnded);
-    socket.on('ride-accepted-notification', handleRideAcceptedNotification);
-    socket.on('parent-request-accepted-notification', handleParentRequestAccepted);
-    socket.on('parent-request-rejected-notification', handleParentRequestRejected);
-    socket.on('error', handleSocketError);
-    socket.on('connect_error', handleSocketError);
-
-    loadParentData();
-
-    return () => {
-      socket.off('child-location-updated', handleChildLocationUpdate);
-      socket.off('captain-location-update', handleCaptainLocationUpdate);
-      socket.off('child-ride-started', handleChildRideStarted);
-      socket.off('child-ride-ongoing', handleChildRideOngoing);
-      socket.off('child-ride-ended', handleChildRideEnded);
-      socket.off('ride-accepted-notification', handleRideAcceptedNotification);
-      socket.off('parent-request-accepted-notification', handleParentRequestAccepted);
-      socket.off('parent-request-rejected-notification', handleParentRequestRejected);
-      socket.off('error', handleSocketError);
-      socket.off('connect_error', handleSocketError);
-    };
-  }, [parent, socket, selectedChild]);
 
   // Enhanced Notification system with animations
   const addNotification = (message, type = 'info', urgent = false) => {
@@ -315,6 +217,131 @@ const loadParentData = async () => {
     }
   };
 
+  // EFFECT 1: Initial join and load data (runs once)
+  useEffect(() => {
+    if (!parent || !socket || isMounted.current) return;
+    
+    isMounted.current = true;
+    
+    // Only join once
+    if (!hasJoined.current) {
+      socket.emit('parent-join', parent._id);
+      hasJoined.current = true;
+      console.log(`Parent ${parent._id} joined with socket ${socket.id}`);
+    }
+    
+    // Load initial data
+    loadParentData();
+    
+    // Event handlers that are independent of selectedChild
+    const handleParentRequestAccepted = (data) => {
+      console.log('Parent request accepted:', data);
+      addNotification(`${data.userName} accepted your parent request!`, 'success');
+      loadParentData();
+    };
+
+    const handleParentRequestRejected = (data) => {
+      console.log('Parent request rejected:', data);
+      addNotification(`${data.userName} rejected your parent request.`, 'error');
+      setPendingRequests(prev => prev.filter(req => 
+        !(req.userId === data.userId || req._id === data.requestId)
+      ));
+    };
+
+    const handleSocketError = (error) => {
+      console.error('Socket error:', error);
+      addNotification('Connection error. Please check your internet.', 'error');
+    };
+
+    // Set up independent event listeners
+    socket.on('parent-request-accepted-notification', handleParentRequestAccepted);
+    socket.on('parent-request-rejected-notification', handleParentRequestRejected);
+    socket.on('error', handleSocketError);
+    socket.on('connect_error', handleSocketError);
+
+    // Cleanup function
+    return () => {
+      socket.off('parent-request-accepted-notification', handleParentRequestAccepted);
+      socket.off('parent-request-rejected-notification', handleParentRequestRejected);
+      socket.off('error', handleSocketError);
+      socket.off('connect_error', handleSocketError);
+    };
+  }, [parent, socket, loadParentData]);
+
+  // EFFECT 2: Child-specific socket events (only runs when selectedChild changes)
+  useEffect(() => {
+    if (!socket || !selectedChild) return;
+
+    // Child-specific event handlers
+    const handleChildLocationUpdate = (data) => {
+      console.log('Child location updated:', data);
+      if (data.userId === selectedChild._id) {
+        setChildLocation(data.location);
+        setMapCenter([data.location.coordinates[1], data.location.coordinates[0]]);
+        addNotification(`${data.userName}'s location updated`, 'info');
+      }
+    };
+
+    const handleCaptainLocationUpdate = (data) => {
+      console.log('Captain location updated:', data);
+      if (data.childId === selectedChild._id) {
+        setCaptainLocation(data.location);
+        setPulseAnimation(true);
+        setTimeout(() => setPulseAnimation(false), 1000);
+      }
+    };
+
+    const handleChildRideStarted = (data) => {
+      console.log('Child ride started:', data);
+      if (data.childId === selectedChild._id) {
+        setCurrentRide(data.ride);
+        addNotification(`🚗 Ride started for ${data.childName}`, 'success');
+        loadRideHistory(data.childId);
+      }
+    };
+
+    const handleChildRideOngoing = (data) => {
+      console.log('Child ride ongoing:', data);
+      if (data.childId === selectedChild._id) {
+        addNotification(`Ride ongoing for ${data.childName} with captain ${data.captain.name}`, 'info');
+      }
+    };
+
+    const handleChildRideEnded = (data) => {
+      console.log('Child ride ended:', data);
+      if (data.childId === selectedChild._id) {
+        setCurrentRide(null);
+        setCaptainLocation(null);
+        addNotification(`Ride completed for ${data.childName}. Fare: ₹${data.fare}`, 'success');
+        loadRideHistory(data.childId);
+        loadChildStats(selectedChild._id);
+      }
+    };
+
+    const handleRideAcceptedNotification = (notification) => {
+      console.log('Ride accepted notification:', notification);
+      addNotification(notification.message, 'success');
+    };
+
+    // Set up child-specific event listeners
+    socket.on('child-location-updated', handleChildLocationUpdate);
+    socket.on('captain-location-update', handleCaptainLocationUpdate);
+    socket.on('child-ride-started', handleChildRideStarted);
+    socket.on('child-ride-ongoing', handleChildRideOngoing);
+    socket.on('child-ride-ended', handleChildRideEnded);
+    socket.on('ride-accepted-notification', handleRideAcceptedNotification);
+
+    // Cleanup function for child-specific events
+    return () => {
+      socket.off('child-location-updated', handleChildLocationUpdate);
+      socket.off('captain-location-update', handleCaptainLocationUpdate);
+      socket.off('child-ride-started', handleChildRideStarted);
+      socket.off('child-ride-ongoing', handleChildRideOngoing);
+      socket.off('child-ride-ended', handleChildRideEnded);
+      socket.off('ride-accepted-notification', handleRideAcceptedNotification);
+    };
+  }, [socket, selectedChild]);
+
   const removeNotification = (id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
   };
@@ -340,7 +367,6 @@ const loadParentData = async () => {
 
     try {
       setIsSendingRequest(true);
-      // const token = localStorage.getItem('token');
       const token = localStorage.getItem('tokenParent');
       const response = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/parents/send-request`, 
@@ -353,7 +379,8 @@ const loadParentData = async () => {
           timeout: 10000
         }
       );
-      console.log("send child req called, res="+response);
+
+      const requestId=response.data.requestId;
       
       addNotification('Request sent successfully!', 'success');
       setUserEmail('');
@@ -363,7 +390,8 @@ const loadParentData = async () => {
       if (socket && parent) {
         socket.emit('parent-request-sent', {
           userEmail: userEmail,
-          parentId: parent._id
+          parentId: parent._id,
+          requestId:requestId
         });
       }
 
@@ -378,7 +406,6 @@ const loadParentData = async () => {
 
   const acceptChildRequest = async (requestId) => {
     try {
-      // const token = localStorage.getItem('token');
       const token = localStorage.getItem('tokenParent');
       await axios.post(
         `${import.meta.env.VITE_BASE_URL}/parents/add-child`, 
@@ -398,7 +425,6 @@ const loadParentData = async () => {
 
   const cancelRequest = async (requestId) => {
     try {
-      // const token = localStorage.getItem('token');
       const token = localStorage.getItem('tokenParent');
       await axios.delete(
         `${import.meta.env.VITE_BASE_URL}/parents/cancel-request/${requestId}`, 
@@ -417,7 +443,6 @@ const loadParentData = async () => {
 
   const removeChild = async (childId) => {
     try {
-      // const token = localStorage.getItem('token');
       const token = localStorage.getItem('tokenParent');
       await axios.delete(
         `${import.meta.env.VITE_BASE_URL}/parents/remove-child/${childId}`, 
@@ -442,7 +467,6 @@ const loadParentData = async () => {
 
   const trackChildLocation = async (childId) => {
     try {
-      // const token = localStorage.getItem('token');
       const token = localStorage.getItem('tokenParent');
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/parents/child-location/${childId}`, 
@@ -507,45 +531,6 @@ const loadParentData = async () => {
     }
     addNotification(`Message feature coming soon for Captain ${currentRide.captain.fullname?.firstname}`, 'info');
   };
-
-  // In the useEffect socket event handlers, update the handler for parent request rejection:
-  const handleParentRequestRejected = (data) => {
-      console.log('Parent request rejected:', data);
-      addNotification(`${data.userName} rejected your parent request.`, 'error');
-      
-      // ✅ FIX: Update pending requests list immediately
-      setPendingRequests(prev => prev.filter(req => 
-          !(req.userId === data.userId || req._id === data.requestId)
-      ));
-      
-      // Also reload parent data to ensure consistency
-      loadParentData();
-  };
-
-  // Also update the socket event handler setup:
-  useEffect(() => {
-      if (!parent || !socket) return;
-
-      socket.emit('parent-join', parent._id);
-
-      const handleParentRequestRejected = (data) => {
-          console.log('Parent request rejected:', data);
-          addNotification(`${data.userName} rejected your parent request.`, 'error');
-          
-          // ✅ FIX: Remove from pending requests
-          setPendingRequests(prev => prev.filter(req => {
-              // Match by userId or requestId
-              return req.userId !== data.userId && req._id !== data.requestId;
-          }));
-      };
-
-      // Register event listener
-      socket.on('parent-request-rejected-notification', handleParentRequestRejected);
-
-      return () => {
-          socket.off('parent-request-rejected-notification', handleParentRequestRejected);
-      };
-  }, [parent, socket, setPendingRequests]);
 
   // Notification Toast Component with animations
   const NotificationToast = () => (
@@ -879,33 +864,25 @@ const loadParentData = async () => {
 
             {/* Pending Requests - Animated List */}
             {pendingRequests.length > 0 && (
-              
               <div className='relative group animate-slideInUp' style={{ animationDelay: '400ms' }}>
                 <div className='absolute -inset-1 bg-gradient-to-r from-amber-600 to-yellow-600 rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500'></div>
                 <div className='relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10'>
-                  <h2 className='text-xl font-semibold mb-4 text-white flex items-center gap-2'>
-                    <div className='relative w-8 h-8 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg animate-pulse'>
-                      <i className="ri-time-line text-white"></i>
-                    </div>
-                    Pending Requests ({pendingRequests.length})
-                  </h2>
-
-<div className="flex justify-between items-center mb-4">
-    <h2 className='text-xl font-semibold text-white flex items-center gap-2'>
-        <div className='relative w-8 h-8 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg animate-pulse'>
-            <i className="ri-time-line text-white"></i>
-        </div>
-        Pending Requests ({pendingRequests.length})
-    </h2>
-    <button
-        onClick={loadParentData}
-        className="text-sm text-white/60 hover:text-white flex items-center gap-1 hover:scale-105 transition-all"
-        title="Refresh pending requests"
-    >
-        <i className="ri-refresh-line"></i>
-        Refresh
-    </button>
-</div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className='text-xl font-semibold text-white flex items-center gap-2'>
+                      <div className='relative w-8 h-8 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-lg flex items-center justify-center shadow-lg animate-pulse'>
+                        <i className="ri-time-line text-white"></i>
+                      </div>
+                      Pending Requests ({pendingRequests.length})
+                    </h2>
+                    <button
+                      onClick={loadParentData}
+                      className="text-sm text-white/60 hover:text-white flex items-center gap-1 hover:scale-105 transition-all"
+                      title="Refresh pending requests"
+                    >
+                      <i className="ri-refresh-line"></i>
+                      Refresh
+                    </button>
+                  </div>
                   <div className='space-y-3'>
                     {pendingRequests.map(request => (
                       <div key={request._id} className="group/item relative p-4 bg-gradient-to-r from-white/5 to-transparent rounded-xl border border-white/10 hover:border-amber-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-amber-500/10">

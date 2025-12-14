@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useContext } from 'react'
 import { SocketContext } from '../context/SocketContext'
 import { useNavigate } from 'react-router-dom'
-import LiveTracking from '../components/LiveTracking'
+import LiveTracking from './LiveTracking'
 
 const Riding = () => {
     const location = useLocation()
