@@ -15,3 +15,6 @@ lazy and a global suspense for every and all compo
 
 useMemo for fare calculation
 
+socket.id is inconsitent for all user,captain,par
+
+lenis to make website smooth

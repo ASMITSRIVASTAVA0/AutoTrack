@@ -218,6 +218,23 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             addNotification('Connection error. Please check your internet.', 'error');
         };
 
+        // Add this function inside the useEffect in Home.jsx
+        const handleParentRequestCancelled = (data) => {
+            console.log('Parent request cancelled:', data);
+            
+            // Remove the request from parentRequests state
+            setParentRequests(prev => prev.filter(req => 
+                req._id !== data.requestId && 
+                req.parentId !== data.parentId
+            ));
+            
+            addNotification(`Parent request from ${data.parentName} has been withdrawn.`, 'info');
+        };
+
+        // Add this to your existing socket.on listeners in the useEffect:
+        
+        // Don't forget to clean it up in the return function:
+        
         // Join user room
         socket.emit("join", { userType: "user", userId: user._id });
         loadParentRequests();
@@ -229,6 +246,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
         socket.on('parent-requests-list', handleParentRequestsList);
         socket.on('error', handleSocketError);
         socket.on('connect_error', handleSocketError);
+        socket.on('parent-request-cancelled', handleParentRequestCancelled);
 
         return () => {
             // Cleanup event listeners
@@ -238,6 +256,8 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             socket.off('parent-requests-list', handleParentRequestsList);
             socket.off('error', handleSocketError);
             socket.off('connect_error', handleSocketError);
+            socket.off('parent-request-cancelled', handleParentRequestCancelled);
+
         };
     }, [navigate, socket, user]);
 
@@ -351,6 +371,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             setIsLoadingRequests(false);
         }
     };
+    
     // Refresh user data after parent changes
     // In Home.jsx, update refreshUserData function
     const refreshUserData = async () => {

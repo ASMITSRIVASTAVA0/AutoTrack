@@ -77,6 +77,10 @@ const rideSchema = new mongoose.Schema({
         type: String,
         enum: ['car', 'motorcycle', 'auto'],
         required: true
+    },
+    createdAt:{
+        type:Date,
+        default:Date.now
     }
 });
 

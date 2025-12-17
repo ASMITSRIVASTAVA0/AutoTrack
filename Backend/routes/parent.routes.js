@@ -48,4 +48,7 @@ router.delete('/cancel-request/:requestId', authMiddleware.authParent, parentCon
 // Update add-child to use request acceptance flow
 router.post('/add-child', authMiddleware.authParent, parentController.addChild);
 
+
+router.get("/child-rides/:childId",authMiddleware.authParent,parentController.getChildRides);
+
 module.exports = router;

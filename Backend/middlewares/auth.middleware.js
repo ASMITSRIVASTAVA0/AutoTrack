@@ -84,7 +84,7 @@ module.exports.authParent = async (req, res, next) => {
         return next();
 
     } catch (err) {
-        console.error('Token verification error:', err);
+        console.error('Token verification error at auth.middleware.js', err);
         return res.status(401).json({ message: 'Unauthorized Parent' });
     }
 }

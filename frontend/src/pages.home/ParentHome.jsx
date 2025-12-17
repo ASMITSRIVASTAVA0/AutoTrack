@@ -174,6 +174,8 @@ const ParentHome = () => {
   const loadChildStats = async (childId) => {
     try {
       const token = localStorage.getItem('tokenParent');
+
+      // currently route not made
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/parents/child-stats/${childId}`,
         {
@@ -296,7 +298,7 @@ const ParentHome = () => {
       if (data.childId === selectedChild._id) {
         setCurrentRide(data.ride);
         addNotification(`🚗 Ride started for ${data.childName}`, 'success');
-        loadRideHistory(data.childId);
+        // loadRideHistory(data.childId);
       }
     };
 
@@ -425,21 +427,39 @@ const ParentHome = () => {
 
   const cancelRequest = async (requestId) => {
     try {
-      const token = localStorage.getItem('tokenParent');
-      await axios.delete(
-        `${import.meta.env.VITE_BASE_URL}/parents/cancel-request/${requestId}`, 
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000
+        const token = localStorage.getItem('tokenParent');
+        
+        // First get the request details before cancelling
+        const request = pendingRequests.find(req => req._id === requestId);
+        
+        await axios.delete(
+            `${import.meta.env.VITE_BASE_URL}/parents/cancel-request/${requestId}`, 
+            {
+                headers: { Authorization: `Bearer ${token}` },
+                timeout: 10000
+            }
+        );
+        
+        addNotification('Request cancelled successfully', 'info');
+        
+        // Emit socket event to notify user
+        if (socket && request && request.userId) {
+            socket.emit('parent-request-cancelled', {
+                requestId: requestId,
+                parentId: parent?._id,
+                parentName: `${parent?.fullname?.firstname} ${parent?.fullname?.lastname}`,
+                userId: request.userId,
+                timestamp: new Date()
+            });
         }
-      );
-      addNotification('Request cancelled successfully', 'info');
-      loadParentData();
+        
+        loadParentData();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Error cancelling request';
-      addNotification(errorMessage, 'error');
+        const errorMessage = error.response?.data?.message || 'Error cancelling request';
+        addNotification(errorMessage, 'error');
     }
   };
+
 
   const removeChild = async (childId) => {
     try {
@@ -896,19 +916,13 @@ const ParentHome = () => {
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => acceptChildRequest(request._id)}
-                              className="relative px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg hover:from-emerald-700 hover:to-green-700 transition-all duration-300 font-semibold flex items-center gap-2 shadow-lg hover:shadow-emerald-500/25 hover:scale-105 active:scale-95"
-                            >
-                              <i className="ri-check-line"></i>
-                              Accept
-                            </button>
+                            
                             <button
                               onClick={() => cancelRequest(request._id)}
                               className="relative px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-lg hover:from-rose-700 hover:to-red-700 transition-all duration-300 font-semibold flex items-center gap-2 shadow-lg hover:shadow-rose-500/25 hover:scale-105 active:scale-95"
                             >
                               <i className="ri-close-line"></i>
-                              Cancel
+                              Withdraw
                             </button>
                           </div>
                         </div>

@@ -45,7 +45,7 @@ function initializeSocket(server) {//server is http server defined in server.js
 
     // When a client connects
     io.on('connection', (socket) => {//socket is one connected client having unique socket.id
-        console.log(`Client connected: ${socket.id}`);
+        console.log(`Client connected with socketid=: ${socket.id}`);
 
 
         // socket.on("event-name",(data)=>{});//Listen for event
@@ -373,7 +373,31 @@ function initializeSocket(server) {//server is http server defined in server.js
             }
         });
 
-        // Handle disconnect
+        // Handle parent request cancellation notification
+        socket.on('parent-request-cancelled', async (data) => {
+            try {
+                console.log('Parent request cancelled notification:', data);
+                
+                // Find the user by ID to get their socketId
+                const user = await userModel.findById(data.userId).select('socketId');
+                
+                if (user && user.socketId) {
+                    // Directly emit to the user's socketId
+                    io.to(user.socketId).emit('parent-request-cancelled', {
+                        requestId: data.requestId,
+                        parentId: data.parentId,
+                        parentName: data.parentName,
+                        timestamp: data.timestamp
+                    });
+                    console.log(`Sent parent-request-cancelled to user ${data.userId} with socket ${user.socketId}`);
+                } else {
+                    console.log(`User ${data.userId} is not online to receive cancellation notification`);
+                }
+            } catch (error) {
+                console.error('Error broadcasting parent request cancellation:', error);
+            }
+        });
+// Handle disconnect
         socket.on('disconnect', async () => {
             console.log(`Client disconnected: ${socket.id}`);
             

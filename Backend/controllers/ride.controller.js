@@ -8,7 +8,7 @@ const { sendMessageToSocketId } = require('../socket');
 
 const rideModel = require('../models/ride.model');
 const parentModel = require('../models/parent.model');
-
+const userModel=require("../models/user.model");
 
 module.exports.createRide = async (req, res) => {
     const errors = validationResult(req);
@@ -103,14 +103,13 @@ module.exports.getFare = async (req, res) => {
     }
 
     const { pickup, destination } = req.query;
-    console.log("from req.body pickup:", pickup, "destination:", destination);
+    console.log("from req.body pickup address:", pickup, "destination:", destination);
 
     try {
         // Get coordinates for fare calculation
         const pickupCoordinates = await mapService.getAddressCoordinate(pickup);
         const destinationCoordinates = await mapService.getAddressCoordinate(destination);
-        console.log("pickup coordinates", pickupCoordinates);
-        console.log("destination coordinates", destinationCoordinates);
+        console.log(`pickup coordinates, ${pickupCoordinates} destination coordinates: ${destinationCoordinates}`);
         const fare = await rideService.getFare(
             { 
                 lat: pickupCoordinates.lat,  // ✅ Change 'ltd' to 'lat'
@@ -255,6 +254,15 @@ module.exports.endRide = async (req, res) => {
             .populate('captain', 'fullname vehicle');
 
         console.log("Ride ended:", populatedRide);
+
+        // mycode to add ride to user's ridehistory
+        const userWithRide=await userModel.findByIdAndUpdate(
+            populatedRide.user._id,
+            {$push:{rideHistory:populatedRide._id}},
+            {new:true}
+        );
+
+        console.log("updated user with ride history:",userWithRide);
 
         if (populatedRide.user.socketId) {
             sendMessageToSocketId(populatedRide.user.socketId, {

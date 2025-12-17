@@ -101,116 +101,23 @@ module.exports.getParentProfile = async (req, res, next) => {
 }
 
 
-// module.exports.sendChildRequest = async (req, res, next) => {
-//     try {
-//         const { userEmail } = req.body;
-//         const parentId = req.parent?._id; // Add optional chaining
-
-//         // console.log(" at controller.js");
-//         console.log("sendChildRequest called at parent.controller.js, child email="+userEmail+" parid="+parentId);
-
-//         // Check if parent is authenticated
-//         if (!parentId) {
-//             console.log("par not authenticated at parent.controller.js");
-//             return res.status(401).json({ message: 'Parent not authenticated' });
-//         }
-
-//         // Find user by email
-//         const user = await userModel.findOne({ email: userEmail });
-//         if (!user) {
-//             console.log("user not found with useremail="+userEmail);
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-//         console.log("Found user at controller.js : ", user.fullname.firstname);
-
-//         // Check if user is already a child
-//         // as child can have ONLY ONE par
-//         if (user.parentId && user.parentId.toString() === parentId.toString()) {
-//             console.log(`${user.fullname.firstname} is already child of ${parentId} at parent.controller.js`);
-//             return res.status(400).json({ message: 'User is already your child' });
-//         }
-//         else if(user.parentId){
-//             console.log(`${user.fullname.firstname} can only have one par, and par is ${user.parentId?.fullname.firstname}`);
-//             return res.status(400).json({message:"User is already have a parent"});
-//         }
-
-//         // Check if request already exists
-//         const existingRequest = user.pendingParentRequests?.find(
-//             req => req.parentId.toString() === parentId.toString() && req.status === 'pending'
-//         );
-        
-//         if (existingRequest) {
-//             console.log("req already send to user");
-//             return res.status(400).json({ message: 'Request already sent to this user' });
-//         }
-
-//         const parent = await parentModel.findById(parentId);
-//         if (!parent) {
-//             return res.status(404).json({ message: 'Parent not found' });
-//         }
-
-//         // Add request to user
-//         console.log("user._id="+user._id);
-//         const userupdated=await userModel.findByIdAndUpdate(user._id, {
-//             $push: {
-//                 pendingParentRequests: {
-//                     parentId: parentId,
-//                     parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
-//                     status: 'pending'
-//                 }
-//             }
-//         });
-//         console.log("Updated user pending req list at parent.controller.js : ", userupdated.pendingParentRequests);
-
-//         // Add request to parent
-//         const updatedParent=await parentModel.findByIdAndUpdate(parentId, {
-//             $push: {
-//                 pendingChildRequests: {
-//                     userId: user._id,
-//                     userName: `${user.fullname.firstname} ${user.fullname.lastname}`,
-//                     status: 'pending'
-//                 }
-//             }
-//         });
-//         console.log("Updated parent child req at controller.js : ", updatedParent.pendingChildRequests);
-
-//         // Notify user via socket if online
-//         const { sendMessageToSocketId } = require('../socket');
-//         if (user.socketId) {
-//             sendMessageToSocketId(user.socketId, {
-//                 event: 'parent-request-received',
-//                 data: {
-//                     parentId: parentId,
-//                     parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
-//                     requestId: user.pendingParentRequests[user.pendingParentRequests.length - 1]._id
-//                 }
-//             });
-//         }
-
-//         res.status(200).json({ message: 'Child request sent successfully' });
-//     } catch (err) {
-//         console.error('Error in sendChildRequest:', err);
-//         res.status(500).json({ message: err.message });
-//     }
-// }
-
 // Update sendChildRequest function in parent.controller.js
 module.exports.sendChildRequest = async (req, res, next) => {
     try {
         const { userEmail } = req.body;
         const parentId = req.parent?._id;
 
-        console.log("sendChildRequest called at parent.controller.js, child email="+userEmail+" parid="+parentId);
+        console.log("sendChildRequest called at parent.controller.js, child email=" + userEmail + " parid=" + parentId);
 
         if (!parentId) {
             console.log("par not authenticated at parent.controller.js");
             return res.status(401).json({ message: 'Parent not authenticated' });
         }
 
-        // FIX: Remove .populate("parent") - this field doesn't exist
+        // Find user with populated pendingParentRequests
         const user = await userModel.findOne({ email: userEmail });
         if (!user) {
-            console.log("user not found with useremail="+userEmail);
+            console.log("user not found with useremail=" + userEmail);
             return res.status(404).json({ message: 'User not found' });
         }
         console.log("Found user at controller.js : ", user.fullname.firstname);
@@ -219,20 +126,42 @@ module.exports.sendChildRequest = async (req, res, next) => {
         if (user.parentId && user.parentId.toString() === parentId.toString()) {
             console.log(`${user.fullname.firstname} is already child of ${parentId} at parent.controller.js`);
             return res.status(400).json({ message: 'User is already your child' });
-        }
-        else if(user.parentId){
+        } else if (user.parentId) {
             console.log(`${user.fullname.firstname} can only have one par, and par is ${user.parentId}`);
-            return res.status(400).json({message:"User is already have a parent"});
+            return res.status(400).json({ message: "User already has a parent" });
         }
 
-        // Check if request already exists
+        // Check if request already exists - ENHANCED CHECK
         const existingRequest = user.pendingParentRequests?.find(
             req => req.parentId.toString() === parentId.toString() && req.status === 'pending'
         );
         
         if (existingRequest) {
-            console.log("req already send to user");
-            return res.status(400).json({ message: 'Request already sent to this user' });
+            console.log("Request already sent to this user - checking if it might be stale...");
+            
+            // Check if the request is older than a certain time (e.g., 1 hour)
+            const requestAge = Date.now() - new Date(existingRequest.requestedAt).getTime();
+            const ONE_HOUR = 60 * 60 * 1000;
+            
+            if (requestAge > ONE_HOUR) {
+                console.log("Stale request found (older than 1 hour), cleaning up...");
+                
+                // Clean up the stale request from user
+                await userModel.findByIdAndUpdate(user._id, {
+                    $pull: { pendingParentRequests: { _id: existingRequest._id } }
+                });
+                
+                // Clean up from parent too
+                await parentModel.findByIdAndUpdate(parentId, {
+                    $pull: { pendingChildRequests: { userId: user._id } }
+                });
+                
+                console.log("Cleaned up stale request, allowing new request");
+                // Continue to send new request
+            } else {
+                console.log("Active pending request exists");
+                return res.status(400).json({ message: 'Request already sent to this user' });
+            }
         }
 
         const parent = await parentModel.findById(parentId);
@@ -240,69 +169,48 @@ module.exports.sendChildRequest = async (req, res, next) => {
             return res.status(404).json({ message: 'Parent not found' });
         }
 
-        // Add request to user - with new: true to get updated document
+        // Create request for user
+        const userRequest = {
+            parentId: parentId,
+            parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
+            status: 'pending',
+            requestedAt: new Date()
+        };
+
+        // Add request to user
         const updatedUser = await userModel.findByIdAndUpdate(
-            user._id, 
-            {
-                $push: {
-                    pendingParentRequests: {
-                        parentId: parentId,
-                        parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
-                        status: 'pending',
-                        requestedAt: new Date()
-                    }
-                }
-            },
+            user._id,
+            { $push: { pendingParentRequests: userRequest } },
             { new: true }
         );
-        
-        console.log("Updated user pending req list at parent.controller.js : ", updatedUser.pendingParentRequests);
 
-        // Add request to parent - with new: true to get updated document
+        // Create request for parent
+        const parentRequest = {
+            userId: user._id,
+            userName: `${user.fullname.firstname} ${user.fullname.lastname}`,
+            status: 'pending',
+            requestedAt: new Date()
+        };
+
+        // Add request to parent
         const updatedParent = await parentModel.findByIdAndUpdate(
             parentId,
-            {
-                $push: {
-                    pendingChildRequests: {
-                        userId: user._id,
-                        userName: `${user.fullname.firstname} ${user.fullname.lastname}`,
-                        status: 'pending',
-                        requestedAt: new Date()
-                    }
-                }
-            },
+            { $push: { pendingChildRequests: parentRequest } },
             { new: true }
         );
-        
-        console.log("Updated parent child req at controller.js : ", updatedParent.pendingChildRequests);
 
-        // Get the newly created request ID
-        const newRequest = updatedUser.pendingParentRequests.find(
-            req => req.parentId.toString() === parentId.toString() &&req.status==="pending"
+        // Get the newly created request ID from user
+        const userWithNewReq = await userModel.findById(user._id);
+        const newlyCreatedRequest = userWithNewReq.pendingParentRequests.find(
+            req => req.parentId.toString() === parentId.toString() && req.status === "pending"
         );
 
-        if(!newRequest){
-            console.log("newreqid not found at parent.controller.js");
-        }
+        console.log(`New request created for user ${user.fullname.firstname} by parent ${parent.fullname.firstname}`);
+        console.log(`User pending requests count: ${userWithNewReq.pendingParentRequests.length}`);
 
-        // Notify user via socket if online
-        // const { sendMessageToSocketId } = require('../socket');
-        // if (user.socketId) {
-        //     console.log("user connected to socket, notififying him");
-        //     sendMessageToSocketId(user.socketId, {
-        //         event: 'parent-request-received',
-        //         data: {
-        //             parentId: parentId,
-        //             parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
-        //             requestId: newRequest ? newRequest._id : null,
-        //             timestamp: new Date()
-        //         }
-        //     });
-        // }
-
-        res.status(200).json({ 
+        res.status(200).json({
             message: 'Child request sent successfully',
-            requestId: newRequest ? newRequest._id : null
+            requestId: newlyCreatedRequest ? newlyCreatedRequest._id : null
         });
     } catch (err) {
         console.error('Error in sendChildRequest:', err);
@@ -363,26 +271,78 @@ module.exports.getPendingRequests = async (req, res, next) => {
     }
 }
 
+// In parent.controller.js, update the cancelChildRequest function:
 module.exports.cancelChildRequest = async (req, res, next) => {
     try {
         const { requestId } = req.params;
         const parentId = req.parent._id;
 
-        // Remove from parent's pending requests
-        const parent=await parentModel.findByIdAndUpdate(parentId, {
-            $pull: { pendingChildRequests: { _id: requestId } }
-        });
+        console.log(`Cancel request called: requestId=${requestId}, parentId=${parentId}`);
 
-        // Remove from user's pending requests
-        const user=await userModel.updateOne(
-            { 'pendingParentRequests._id': requestId },
-            { $pull: { pendingParentRequests: { _id: requestId } } }
+        // Get parent with pendingChildRequests
+        const parent = await parentModel.findById(parentId);
+        if (!parent) {
+            return res.status(404).json({ message: 'Parent not found' });
+        }
+
+        // Find the request in parent's pendingChildRequests
+        const request = parent.pendingChildRequests.find(
+            req => req._id.toString() === requestId
         );
-        console.log(`cancel req called at parent.controller.js, par=${parent.fullname.firstname}, user=${user.fullname.firstname}`);
+
+        if (!request) {
+            console.log(`Request ${requestId} not found in parent's pending requests`);
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        const userId = request.userId;
+
+        // Get user details
+        const user = await userModel.findById(userId);
+        if (!user) {
+            console.log(`User ${userId} not found`);
+        }
+
+        // First remove from parent's pending requests
+        const updatedParent = await parentModel.findByIdAndUpdate(
+            parentId,
+            { $pull: { pendingChildRequests: { _id: requestId } } },
+            { new: true }
+        );
+
+        // Then remove from user's pending requests
+        // We need to find the corresponding request in user's array
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $pull: { pendingParentRequests: { parentId: parentId, status: 'pending' } } },
+            { new: true }
+        );
+
+        console.log(`Removed request from parent ${parent.fullname?.firstname} to user ${user?.fullname?.firstname}`);
+        console.log(`User ${user?.fullname?.firstname} now has ${updatedUser?.pendingParentRequests?.length || 0} pending requests`);
+
+        // Notify user via socket
+        const { sendMessageToSocketId } = require('../socket');
+        
+        // If user is online, send socket notification
+        if (user && user.socketId) {
+            console.log(`Sending socket msg to user=${user.fullname?.firstname} having socketId=${user.socketId}`);
+            
+            sendMessageToSocketId(user.socketId, {
+                event: 'parent-request-cancelled',
+                data: {
+                    requestId: requestId,
+                    parentId: parentId,
+                    parentName: `${parent.fullname?.firstname} ${parent.fullname?.lastname}`,
+                    userId: userId,
+                    timestamp: new Date()
+                }
+            });
+        }
 
         res.status(200).json({ message: 'Request cancelled successfully' });
     } catch (err) {
-        console.log("err cancelling req at parent.controller.js");
+        console.log("Error cancelling request at parent.controller.js:", err);
         res.status(500).json({ message: err.message });
     }
 }
@@ -472,4 +432,19 @@ module.exports.getChildLocation = async (req, res, next) => {
         console.log("err getting child location at parent.controller.js");
         res.status(500).json({ message: err.message });
     }
+}
+
+module.exports.getChildRides=async(req,res,next)=>{
+    console.log("getchildrides called at parent.controller.js");
+    const {userId}=req.params;
+    const parentId=req.parent._id;
+
+    const user=await userModel.findById(userId).populate("rideHistory");
+
+    if(!user){
+        return res.status(404).json({message:"User not found"});
+    }
+    const rideHistory=user.rideHistory;
+    console.log(`rideHistory of user=${user.fullname.firstname} is ${rideHistory}`);
+    return res.status(200).json({rides:rideHistory});
 }

@@ -56,6 +56,10 @@ const userSchema = new mongoose.Schema({
             default: 'pending'
         }
     }]
+    ,rideHistory:[{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"ride"
+    }]
 }, { timestamps: true });
 
 

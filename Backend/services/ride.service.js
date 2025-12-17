@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 async function getFare(pickup, destination) {
-    console.log("getFare at ride.service.js called with pickup:", pickup, "destination:", destination);    
+    console.log("getFare at ride.service.js called with pickup coords:", pickup, "destination:", destination);    
     if (!pickup || !destination) {
         throw new Error('Pickup and destination are required');
     }
@@ -12,21 +12,21 @@ async function getFare(pickup, destination) {
     const distanceTime = await mapService.getDistanceTime(pickup, destination);
     
     const baseFare = {
-        auto: 3,
-        car: 5,
-        moto: 2
+        auto: 0.3,
+        car: 0.5,
+        moto: 0.2
     };
 
     const perKmRate = {
-        auto: 2,
-        car: 3,
-        moto: 1
+        auto: 0.2,
+        car: 0.3,
+        moto: 0.1
     };
 
     const perMinuteRate = {
-        auto: 1.5,
-        car: 2,
-        moto: 1
+        auto: 0,
+        car: 0,
+        moto: 0
     };
 
     const fare = {
