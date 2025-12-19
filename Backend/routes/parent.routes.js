@@ -33,6 +33,8 @@ router.get('/notifications', authMiddleware.authParent, parentController.getNoti
 
 router.patch('/mark-notification-read/:notificationId', authMiddleware.authParent, parentController.markNotificationAsRead)
 
+
+// RENAME IT TO CAPTAIN AS LOCATION OF CAPTAIN WOULD BE RETURNED
 router.get('/child-location/:childId', authMiddleware.authParent, parentController.getChildLocation)
 
 router.get('/logout', authMiddleware.authParent, parentController.logoutParent)
@@ -49,6 +51,6 @@ router.delete('/cancel-request/:requestId', authMiddleware.authParent, parentCon
 router.post('/add-child', authMiddleware.authParent, parentController.addChild);
 
 
-router.get("/child-rides/:childId",authMiddleware.authParent,parentController.getChildRides);
+router.get("/child-rides/:userId",authMiddleware.authParent,parentController.getChildRides);
 
 module.exports = router;

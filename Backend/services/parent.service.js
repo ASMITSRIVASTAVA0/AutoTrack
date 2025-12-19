@@ -51,7 +51,8 @@ module.exports.addNotification = async (parentId, notificationData) => {
         { $push: { notifications: notificationData } },
         { new: true }
     ).populate('notifications.userId').populate('notifications.captainId');
-    console.log("add notification called at parent.services.js");
+    
+    console.log("add notification called at parent.services.js that is called from socket.js(ride-accepted event) and socket.js was called from ride.controller.js");
     return parent;
 }
 

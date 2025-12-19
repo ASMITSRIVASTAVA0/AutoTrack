@@ -142,14 +142,18 @@ module.exports.confirmRide = async (req, res) => {
             .populate('user', 'fullname email socketId parentId')
             .populate('captain', 'fullname vehicle socketId location');
 
+
+        // ride-confimed event will be listened at home.jsx 
         // Notify user
         if (populatedRide.user.socketId) {
             sendMessageToSocketId(populatedRide.user.socketId, {
                 event: 'ride-confirmed',
                 data: {
                     rideId: populatedRide._id,
+                    ride:populatedRide,//mycode to send entire ride
                     captain: {
-                        name: populatedRide.captain.fullname,
+                        // name: populatedRide.captain.fullname,
+                        name: populatedRide.captain.fullname.firstname+" "+populatedRide.captain.fullname.lastname,
                         vehicle: populatedRide.captain.vehicle
                     },
                     status: populatedRide.status

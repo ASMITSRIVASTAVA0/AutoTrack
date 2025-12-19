@@ -89,10 +89,9 @@ module.exports.logoutParent = async (req, res, next) => {
 module.exports.getParentProfile = async (req, res, next) => {
     try {
         const parent = await parentModel.findById(req.parent._id)
-            .populate('children')
-            // .populate("pendingChildRequests")//mycode
-            ;
-        console.log("getparprofile called at parent.controller.js");
+            .populate('children');
+
+        console.log("getparprofile called at parent.controller.js par=",parent.fullname.firstname);
         res.status(200).json({ parent });
     } catch (err) {
         console.log("error at getparprofile called at parent.controller.js");
@@ -225,8 +224,9 @@ module.exports.removeChild = async (req, res, next) => {
         const updatedParent = await parentService.removeChildFromParent(parentId, childId);
 
         // Remove parent reference from child
-        const user=await userModel.findByIdAndUpdate(childId, { parentId: null });
-        console.log(`removechild at parent.controller.js with childname=${child.fullname.firstname} and parname=${updatedParent.fullname.firstname}`);
+        const user=await userModel.findByIdAndUpdate(childId, { parentId: null },{new:true});
+
+        console.log(`removechild at parent.controller.js with childname=${child.fullname.firstname}, childparupdated=${user.parentId} and parname=${updatedParent.fullname.firstname}`);
         
         res.status(200).json({ message: 'Child removed successfully', parent: updatedParent });
     } catch (err) {
@@ -260,9 +260,11 @@ module.exports.markNotificationAsRead = async (req, res, next) => {
 }
 module.exports.getPendingRequests = async (req, res, next) => {
     try {
+
         const parent = await parentModel.findById(req.parent._id)
             .populate('pendingChildRequests.userId', 'fullname email');
-        console.log("getpendingreq called at parent.controller.js");
+
+        console.log("getpendingreq called at parent.controller.js, pendingreq count=",parent.pendingChildRequests.length);
         res.status(200).json({ requests: parent.pendingChildRequests });
     } catch (err) {
         console.log("ERROR getpendingreq called at parent.controller.js");
@@ -392,30 +394,36 @@ module.exports.addChild = async (req, res, next) => {
 }
 
 // Update getChildLocation to include ride information
+// return coords of captain
 module.exports.getChildLocation = async (req, res, next) => {
     try {
         const { childId } = req.params;
         const parentId = req.parent._id;
 
         const parent = await parentModel.findById(parentId);
-        console.log(`getchild called at parent.controller.js, par=${parent.fullname.firstname}`)
+        console.log(`getchildlocation called at parent.controller.js from parenthome.jsx, par=${parent.fullname.firstname}`)
         if (!parent.children.includes(childId)) {
             console.log("par Unauthorized as user is not your child at parent.controller.js");
             return res.status(403).json({ message: 'Unauthorized as user is not your child' });
         }
 
         const child = await userModel.findById(childId);
+
         const rideModel = require('../models/ride.model');
-        
         // Get current ride information if any
+        console.log(`user=${child.fullname.firstname} at parent.controller.js`);
+        
         const currentRide = await rideModel.findOne({
             user: childId,
             status: { $in: ['accepted', 'ongoing'] }
         }).populate('captain', 'fullname vehicle location');
 
-        console.log(`at parent.controller.js, child=${child.fullname.firstname}, ride=${currentride._id}`);
+        // console.log(`at parent.controller.js, child=${child.fullname.firstname}, ride=${currentRide._id}`);
+        console.log(`at parent.controller.js, child=${child.fullname.firstname}, ride=${currentRide?._id}`);
+        
         res.status(200).json({ 
-            location: child.location,
+            // location: child.location,
+            // captainLocation: currentRide && currentRide.captain ? currentRide.captain.location : null,
             currentRide: currentRide ? {
                 rideId: currentRide._id,
                 status: currentRide.status,
@@ -425,7 +433,8 @@ module.exports.getChildLocation = async (req, res, next) => {
                     location: currentRide.captain.location
                 } : null,
                 pickup: currentRide.pickup,
-                destination: currentRide.destination
+                destination: currentRide.destination,
+                fare:currentRide.fare
             } : null
         });
     } catch (err) {
@@ -435,16 +444,27 @@ module.exports.getChildLocation = async (req, res, next) => {
 }
 
 module.exports.getChildRides=async(req,res,next)=>{
-    console.log("getchildrides called at parent.controller.js");
     const {userId}=req.params;
-    const parentId=req.parent._id;
+    // const parentId=req.parent._id;
+    console.log("getchildrides called at parent.controller.js, userId=",userId);
+    // const user=await userModel.findById(userId)
+    // .populate("rideHistory")
+    // .populate("captain");
 
-    const user=await userModel.findById(userId).populate("rideHistory");
-
+    const user = await userModel.findById(userId)
+    .populate({
+        path: "rideHistory",
+        populate: {
+            path: "captain"
+        }
+    });
+    
     if(!user){
         return res.status(404).json({message:"User not found"});
     }
+    console.log("getchildrides called at parent.controller.js by par for user="+user.fullname.firstname);
+    
     const rideHistory=user.rideHistory;
-    console.log(`rideHistory of user=${user.fullname.firstname} is ${rideHistory}`);
+    // console.log(`rideHistory of user=${user.fullname.firstname} is ${rideHistory}`);
     return res.status(200).json({rides:rideHistory});
 }

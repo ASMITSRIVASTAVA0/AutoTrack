@@ -2,6 +2,7 @@ const userModel = require('../models/user.model');
 const userService = require('../services/user.service');
 const { validationResult } = require('express-validator');
 const blackListTokenModel = require('../models/blacklistToken.model');
+const parentModel=require("../models/parent.model.js");
 
 module.exports.registerUser = async (req, res, next) => {
     
@@ -136,9 +137,12 @@ module.exports.removeParent = async (req, res, next) => {
         
         console.log(`removeparent called at userParent.controller.js, User ${user.fullname.firstname} removed parent ${parentId}`);
         
+        // Fetch the updated user to ensure all virtuals/populates are included
+        const updatedUser = await userModel.findById(userId);
+        
         res.status(200).json({ 
             message: 'Parent removed successfully',
-            user: user
+            user: updatedUser // Return the complete user object
         });
     } catch (err) {
         console.error('Error removing parent at user.controller.js:', err);

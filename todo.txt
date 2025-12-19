@@ -18,3 +18,16 @@ useMemo for fare calculation
 socket.id is inconsitent for all user,captain,par
 
 lenis to make website smooth
+
+only req to backend only from frontend, block postman or else
+
+parent.service.js me addnotifcation ke sath removenotification bhi add, joki 24hr me expire
+
+
+try to automate starting of both terminal
+
+perform testing(load capacity/numeric data) and add results 
+
+add security to cyber attacks
+
+add videocall facility in which par can do a video call with user

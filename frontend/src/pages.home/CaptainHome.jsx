@@ -72,43 +72,116 @@ const CaptainHome = () => {
         return () => window.removeEventListener('mousemove', handleMouseMove)
     }, [])
 
-    useEffect(() => {
-        socket.emit('join', {
-            userId: captain._id,
-            userType: 'captain'
-        })
+
+    // THIS USEEFFECT HAS MAP UPDATE LOGIC
+
+    // useEffect(() => {
+    //     socket.emit('join', {
+    //         userId: captain._id,
+    //         userType: 'captain'
+    //     })
         
+    //     const updateLocation = () => {
+    //         if (navigator.geolocation) {
+    //             navigator.geolocation.getCurrentPosition(position => {
+    //                 const location = {
+    //                     lat: position.coords.latitude,
+    //                     lng: position.coords.longitude
+    //                 }
+                    
+    //                 setCaptainLocation(location)
+                    
+    //                 // socket.emit('update-location-captain', {
+    //                 //     userId: captain._id,
+    //                 //     location: location
+    //                 // });
+                    
+    //                 setPulseAnimation(true)
+    //                 setTimeout(() => setPulseAnimation(false), 1000)
+                    
+    //                 addNotification('Location updated', 'info')
+    //             }, (error) => {
+    //                 console.error('Error getting location:', error);
+    //                 addNotification('Error getting location', 'error')
+    //             });
+    //         }
+    //     };
+
+    //     const locationInterval = setInterval(updateLocation, 2000);
+    //     updateLocation()
+
+    //     return () => clearInterval(locationInterval)
+    // }, [])
+
+    // In CaptainHome.jsx, replace the socket connection effect:
+
+    useEffect(() => {
+        if (!socket || !captain?._id) return;
+
+        // Handle socket reconnection
+        const handleConnect = () => {
+            console.log('Socket reconnected, rejoining captain room');
+            socket.emit('join', {
+                userId: captain._id,
+                userType: 'captain'
+            });
+        };
+
+        // Join on initial connection or reconnection
+        const joinRoom = () => {
+            socket.emit('join', {
+                userId: captain._id,
+                userType: 'captain'
+            });
+        };
+
+        // Listen for connection events
+        socket.on('connect', handleConnect);
+        
+        // Initial join
+        if (socket.connected) {
+            joinRoom();
+        }
+
+        // Set up location update
         const updateLocation = () => {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
                     const location = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
+                    };
+                    
+                    setCaptainLocation(location);
+                    
+                    // Only emit location if socket is connected
+                    if (socket && socket.connected) {
+                        // socket.emit('update-location-captain', {
+                        //     userId: captain._id,
+                        //     location: location
+                        // });
                     }
                     
-                    setCaptainLocation(location)
-                    
-                    // socket.emit('update-location-captain', {
-                    //     userId: captain._id,
-                    //     location: location
-                    // });
-                    
-                    setPulseAnimation(true)
-                    setTimeout(() => setPulseAnimation(false), 1000)
-                    
-                    addNotification('Location updated', 'info')
+                    setPulseAnimation(true);
+                    setTimeout(() => setPulseAnimation(false), 1000);
+                    addNotification('Location updated', 'info');
                 }, (error) => {
                     console.error('Error getting location:', error);
-                    addNotification('Error getting location', 'error')
+                    addNotification('Error getting location', 'error');
                 });
             }
         };
 
-        const locationInterval = setInterval(updateLocation, 10000)
-        updateLocation()
+        const locationInterval = setInterval(updateLocation, 2000);
+        updateLocation();
 
-        return () => clearInterval(locationInterval)
-    }, [])
+        // Cleanup
+        return () => {
+            clearInterval(locationInterval);
+            socket.off('connect', handleConnect);
+            socket.off('new-ride');
+        };
+    }, [socket, captain]);
 
     socket.on('new-ride', (data) => {
         setRide(data)
@@ -272,7 +345,7 @@ const CaptainHome = () => {
 
     return (
         <div className='h-screen bg-gradient-to-b from-gray-900 via-black to-blue-900 relative overflow-hidden'>
-            <style jsx>{`
+            <style>{`
                 @keyframes float {
                     0%, 100% { transform: translateY(0) translateX(0) rotate(0deg); }
                     33% { transform: translateY(-20px) translateX(10px) rotate(120deg); }

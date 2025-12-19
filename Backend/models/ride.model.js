@@ -62,9 +62,9 @@ const rideSchema = new mongoose.Schema({
     paymentID: {
         type: String,
     },
-    orderId: {
-        type: String,
-    },
+    // orderId: {
+    //     type: String,
+    // },
     signature: {
         type: String,
     },
@@ -86,5 +86,8 @@ const rideSchema = new mongoose.Schema({
 
 // Create geospatial index for pickup location
 rideSchema.index({ 'pickup.location': '2dsphere' });
+
+// Add compound index for captain and status queries
+rideSchema.index({ captain: 1, status: 1 });
 
 module.exports = mongoose.model('ride', rideSchema);

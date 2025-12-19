@@ -33,9 +33,15 @@ const captainSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: [ 'active', 'inactive' ],
-        // default: 'inactive',
-        // mycode
         default:"active"
+    },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    lastSeen: {
+        type: Date,
+        default: Date.now
     },
     earned:{
         type:Number,

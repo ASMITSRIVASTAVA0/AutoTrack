@@ -79,7 +79,15 @@ const parentSchema = new mongoose.Schema({
             enum: ['pending', 'accepted', 'rejected'],
             default: 'pending'
         }
-    }]
+    }],
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    lastSeen: {
+        type: Date,
+        default: Date.now
+    },
 });
 
 parentSchema.methods.generateAuthToken = function () {

@@ -1,67 +1,21 @@
 import React, { useEffect, useRef, useState, useContext, lazy, Suspense } from 'react';
-/*
-useEffect=run side effects in functional comp, run code after runder, re-run when dependecies changes
-useEffect(()=>{ .... code, return ()=>{... cleanup};},[dependencies])
-
-useRef=store stores that survive re-renders and used for dom access or managing mutalbe varibale
-const inputref=useRef(null);
-
-useState=manage local compo state, when update, react re-render compo
-const [count,setCount]=useState(0);
-
-useContext=let compo access shared data directly from context provider without prop drilling
-const val=useContext(mycontext);
-
-lazy=used for code-spliting, loads compo only when its needed on demand,reduce bundle size, performance
-const About=lazy(()=>import("./About.jsx"))
-
-suspence=wrapper compo that shlows a fallback UI while a lazy comp is loading
-<Suspence fallback={<div>Loading..</div>}>
-    <LazyCompo/>
-</Suspence>
-
-*/
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-
-/*
-useGSAp=react-hook to make animation smooth inside react comp, do animation cleanup, re-runs on dependency change,ensure animation run after comp mount, avoid react re-render issues
-gsap=main animation library that provide actual animation method, while useGSAp connect those animations with react-lifecycle
-gsap.to(),gsap.from(),gsap.timeline()
-*/
-
 import axios from 'axios';
-/*
-js library to make http req from both broswer and node.js, works iwth async/await, automatic json handling(no JSON.stringify() or JSON.parse()),buildin timeout
-library=collection of reusable code,e.g react, axios
-framework=give structure to build code/application e.g. springboot, angular, django
-runtime environment=software layer that provide everything to run program e.g. nodejs, jvm,
-software development kit(sdk)=build appli for a specific platform. include library, documentation, tools, debuggers. e.g. aws, sdk, ios sdk
-api=endpoints allowing two sys to communicate. eg.e rest apis,
-compiler=entire src code into machine code before execution e.g. java, c, c++
-interpreter=execute code line by line at runtime e.g python, javscript
-engier=core program that execute code. low-level executor that processes code
-
-*/
-
 import 'remixicon/fonts/remixicon.css';
 import { SocketContext } from '../context/SocketContext';
 import { UserDataContext } from '../context/UserContext';
-
-
 import { useNavigate } from 'react-router-dom';
 
-// Lazy load components for better performance
+// Lazy load components
 const LiveTracking = lazy(() => import('../pages.riding/LiveTracking'));
 const LiveTrackingStatic = lazy(() => import("../pages.riding/LiveTrackingStatic"));
 const VehiclePanel = lazy(() => import('../components/compo.user/VehiclePanel'));
 const ConfirmRide = lazy(() => import('../components/compo.captain/ConfirmRide'));
 const LookingForDriver = lazy(() => import('../components/compo.user/LookingForDriver'));
 const WaitingForDriver = lazy(() => import('../components/compo.user/WaitingForDriver'));
-
 const NotificationToast = lazy(() => import('../components/compo.notification/NotificationToast'));
 const ParentRequestsPanel = lazy(() => import('../components/compo.user/ParentRequestsPanel'));
-const ParentRequestsBadge = lazy(() => import('../components/compo.user/ParentRequestsBadge'));
 const BottomFormPanel = lazy(() => import('../components/compo.user/BottomFormPanel'));
 
 const Home = () => {
@@ -85,6 +39,7 @@ const Home = () => {
     const [showParentMenu, setShowParentMenu] = useState(false);
     const [currentParent, setCurrentParent] = useState(null);
     const [isLoadingParent, setIsLoadingParent] = useState(false);
+    const [socketConnected, setSocketConnected] = useState(false);
 
     // Refs
     const vehiclePanelRef = useRef(null);
@@ -94,6 +49,7 @@ const Home = () => {
     const panelRef = useRef(null);
     const panelCloseRef = useRef(null);
     const parentMenuRef = useRef(null);
+    const socketCleanupRef = useRef({});
 
     // Context and navigation
     const navigate = useNavigate();
@@ -105,26 +61,27 @@ const Home = () => {
         const timer = setTimeout(() => setMounted(true), 100);
         return () => clearTimeout(timer);
     }, []);
-/*
-run only onces at no dependency,
-after 100ms, calls setMounted(true), on compo unmount, 
-clean up timer with clearTimeout
-delay state change so UI transiton can happen, prevent heavy computation on first render, wait until compo is "state"
-*/
-    // Load current parent data
-    useEffect(() => {
-        if (user?.parentId) {
-            fetchCurrentParent();
-        } else {
-            setCurrentParent(null);
-        }
-    }, [user?.parentId]);
+
     // Fetch current parent details
-    const fetchCurrentParent = async () => {
+    const fetchCurrentParent = useRef(async () => {
         try {
             setIsLoadingParent(true);
-            // const token = localStorage.getItem('token');
-            const token=localStorage.getItem("tokenUser");
+            
+            console.log('Fetching parent for user:', user?._id);
+            
+            if (!user?._id) {
+                console.log('No user found');
+                setCurrentParent(null);
+                return;
+            }
+            
+            const token = localStorage.getItem("tokenUser");
+            if (!token) {
+                console.error('No token found');
+                setCurrentParent(null);
+                return;
+            }
+            
             const response = await axios.get(
                 `${import.meta.env.VITE_BASE_URL}/users/get-parent`,
                 {
@@ -132,15 +89,95 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
                     timeout: 10000
                 }
             );
-            setCurrentParent(response.data.parent);
+            
+            console.log('Parent fetch response:', response.data);
+            
+            if (response.data.parent && response.data.parent._id) {
+                console.log('Setting currentParent:', response.data.parent);
+                setCurrentParent(response.data.parent);
+            } else {
+                console.log('No parent data in response');
+                setCurrentParent(null);
+            }
         } catch (error) {
             console.error('Error fetching parent:', error);
+            console.error('Error details:', error.response?.data || error.message);
             setCurrentParent(null);
         } finally {
             setIsLoadingParent(false);
         }
-    };
+    }).current;
 
+    // Load parent requests
+    const loadParentRequests = useRef(async () => {
+        try {
+            setIsLoadingRequests(true);
+            const token = localStorage.getItem('tokenUser');
+            const response = await axios.get(
+                `${import.meta.env.VITE_BASE_URL}/user-parents/pending-parent-requests`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    timeout: 10000
+                }
+            );
+            setParentRequests(response.data.pendingRequests || []);
+        } catch (error) {
+            console.error('Error loading parent requests:', error);
+            addNotification('Failed to load parent requests', 'error');
+        } finally {
+            setIsLoadingRequests(false);
+        }
+    }).current;
+
+    // Refresh user data
+    const refreshUserData = useRef(async () => {
+        try {
+            const token = localStorage.getItem('tokenUser');
+            const response = await axios.get(
+                `${import.meta.env.VITE_BASE_URL}/users/profile`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    timeout: 10000
+                }
+            );
+            
+            if (response.data && response.data.user) {
+                const updatedUser = response.data.user;
+                setUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                
+                console.log('Updated user context with parentId:', updatedUser.parentId);
+                
+                // Fetch parent if parentId exists
+                if (updatedUser.parentId) {
+                    setTimeout(() => {
+                        fetchCurrentParent();
+                    }, 300);
+                } else {
+                    setCurrentParent(null);
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing user data:', error);
+        }
+    }).current;
+
+    // Load parent data when user context changes
+    useEffect(() => {
+        console.log('User context updated - checking parent:', {
+            id: user?._id,
+            parentId: user?.parentId,
+            hasParent: !!user?.parentId
+        });
+        
+        if (user?.parentId) {
+            console.log('ParentId found, fetching parent details...');
+            fetchCurrentParent();
+        } else if (user && !user.parentId) {
+            console.log('User has no parentId');
+            setCurrentParent(null);
+        }
+    }, [user?._id, user?.parentId, fetchCurrentParent]);
 
     // Close parent menu when clicking outside
     useEffect(() => {
@@ -154,12 +191,23 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-
-
-    // Enhanced socket implementation
-    useEffect(() => {
+    // Socket event handlers
+    const handleSocketEvents = useRef(() => {
         if (!user || !socket) return;
 
+        // Clean up previous listeners
+        Object.values(socketCleanupRef.current).forEach(cleanup => cleanup?.());
+        socketCleanupRef.current = {};
+
+        // Join user room
+        socket.emit("join", { userType: "user", userId: user._id });
+        setSocketConnected(true);
+        console.log(`User ${user._id} joined socket room`);
+
+        // Load initial data
+        loadParentRequests();
+
+        // Define handlers
         const handleRideConfirmed = (data) => {
             console.log("Ride confirmed:", data);
             const rideData = data.ride || data;
@@ -179,7 +227,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
         const handleParentRequestReceived = (data) => {
             console.log('Parent request received:', data);
 
-            // Check if request already exists to prevent duplicates
+            // Check if request already exists
             const existingRequest = parentRequests.find(req => 
                 req._id === data.requestId || 
                 (req.parentId === data.parentId && req.status === 'pending')
@@ -191,7 +239,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             }
 
             const newRequest = {
-                _id: data.requestId || Date.now(),
+                _id: data.requestId,
                 parentId: data.parentId,
                 parentName: data.parentName,
                 timestamp: new Date(data.timestamp || Date.now()),
@@ -208,21 +256,12 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
 
         const handleParentRequestsList = (data) => {
             console.log('Parent requests list:', data);
-            // setParentRequests(data.requests || data.pendingRequests || []);
             setParentRequests(data.pendingRequests || []);
-        
         };
 
-        const handleSocketError = (error) => {
-            console.error('Socket error:', error);
-            addNotification('Connection error. Please check your internet.', 'error');
-        };
-
-        // Add this function inside the useEffect in Home.jsx
         const handleParentRequestCancelled = (data) => {
             console.log('Parent request cancelled:', data);
             
-            // Remove the request from parentRequests state
             setParentRequests(prev => prev.filter(req => 
                 req._id !== data.requestId && 
                 req.parentId !== data.parentId
@@ -231,58 +270,73 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             addNotification(`Parent request from ${data.parentName} has been withdrawn.`, 'info');
         };
 
-        // Add this to your existing socket.on listeners in the useEffect:
-        
-        // Don't forget to clean it up in the return function:
-        
-        // Join user room
-        socket.emit("join", { userType: "user", userId: user._id });
-        loadParentRequests();
+        const handleParentRemovedSuccess = (data) => {
+            console.log('Parent removed successfully:', data);
+            addNotification('Parent removed successfully', 'success');
+            setCurrentParent(null);
+            setShowParentMenu(false);
+            refreshUserData();
+        };
+
+        const handleSocketError = (error) => {
+            console.error('Socket error:', error);
+            addNotification('Connection error. Please check your internet.', 'error');
+        };
+
+        const handleConnect = () => {
+            console.log('Socket connected');
+            setSocketConnected(true);
+            if (user?._id) {
+                socket.emit("join", { userType: "user", userId: user._id });
+                loadParentRequests();
+            }
+        };
+
+        const handleDisconnect = () => {
+            console.log('Socket disconnected');
+            setSocketConnected(false);
+        };
 
         // Set up event listeners
         socket.on('ride-confirmed', handleRideConfirmed);
         socket.on('ride-started', handleRideStarted);
         socket.on('parent-request-received', handleParentRequestReceived);
         socket.on('parent-requests-list', handleParentRequestsList);
+        socket.on('parent-request-cancelled', handleParentRequestCancelled);
+        socket.on('parent-removed-success', handleParentRemovedSuccess);
         socket.on('error', handleSocketError);
         socket.on('connect_error', handleSocketError);
-        socket.on('parent-request-cancelled', handleParentRequestCancelled);
+        socket.on('connect', handleConnect);
+        socket.on('disconnect', handleDisconnect);
 
-        return () => {
-            // Cleanup event listeners
-            socket.off('ride-confirmed', handleRideConfirmed);
-            socket.off('ride-started', handleRideStarted);
-            socket.off('parent-request-received', handleParentRequestReceived);
-            socket.off('parent-requests-list', handleParentRequestsList);
-            socket.off('error', handleSocketError);
-            socket.off('connect_error', handleSocketError);
-            socket.off('parent-request-cancelled', handleParentRequestCancelled);
-
+        // Store cleanup functions
+        socketCleanupRef.current = {
+            rideConfirmed: () => socket.off('ride-confirmed', handleRideConfirmed),
+            rideStarted: () => socket.off('ride-started', handleRideStarted),
+            parentRequestReceived: () => socket.off('parent-request-received', handleParentRequestReceived),
+            parentRequestsList: () => socket.off('parent-requests-list', handleParentRequestsList),
+            parentRequestCancelled: () => socket.off('parent-request-cancelled', handleParentRequestCancelled),
+            parentRemovedSuccess: () => socket.off('parent-removed-success', handleParentRemovedSuccess),
+            error: () => socket.off('error', handleSocketError),
+            connectError: () => socket.off('connect_error', handleSocketError),
+            connect: () => socket.off('connect', handleConnect),
+            disconnect: () => socket.off('disconnect', handleDisconnect)
         };
-    }, [navigate, socket, user]);
 
+        // Cleanup function
+        return () => {
+            Object.values(socketCleanupRef.current).forEach(cleanup => cleanup?.());
+        };
+    }).current;
 
-    const loadParentRequests = async () => {
-        try {
-            setIsLoadingRequests(true);
-            // const token = localStorage.getItem('token');
-            const token = localStorage.getItem('tokenUser');
-            const response = await axios.get(
-                `${import.meta.env.VITE_BASE_URL}/user-parents/pending-parent-requests`,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    timeout: 10000
-                }
-            );
-            // console.log(response.data.pendingRequests);
-            setParentRequests(response.data.pendingRequests || []);
-        } catch (error) {
-            console.error('Error loading parent requests:', error);
-            addNotification('Failed to load parent requests', 'error');
-        } finally {
-            setIsLoadingRequests(false);
-        }
-    };
+    // Initialize socket events
+    useEffect(() => {
+        handleSocketEvents();
+        
+        return () => {
+            Object.values(socketCleanupRef.current).forEach(cleanup => cleanup?.());
+        };
+    }, [user, socket, navigate, handleSocketEvents]);
 
     // Notification system
     const addNotification = (message, type = 'info') => {
@@ -298,7 +352,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
         setNotifications(prev => prev.filter(notification => notification.id !== id));
     };
 
-    // In Home.jsx, update the acceptParentRequest function
+    // Accept parent request
     const acceptParentRequest = async (requestId, parentId) => {
         try {
             setIsLoadingRequests(true);
@@ -321,12 +375,21 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             );
             
             console.log("Accept parent req response:", response.data);
-            // console.log("Accept parent req response:", response.data?.message);
             
             // Remove the accepted request from state
             setParentRequests(prev => prev.filter(req => req._id !== requestId));
             
-            // Refresh user data to get updated parentId
+            // Notify parent via socket
+            if (socket) {
+                socket.emit('parent-request-accepted', {
+                    parentId: parentId,
+                    userId: user?._id,
+                    userName: `${user?.fullname?.firstname} ${user?.fullname?.lastname}`,
+                    requestId: requestId
+                });
+            }
+            
+            // Refresh user data
             await refreshUserData();
             
             addNotification('Parent request accepted successfully!', 'success');
@@ -340,6 +403,8 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             setIsLoadingRequests(false);
         }
     };
+
+    // Reject parent request
     const rejectParentRequest = async (requestId, parentId) => {
         try {
             console.log("Reject parent req called, requestId=", requestId, "parentId=", parentId);
@@ -360,6 +425,15 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             // Remove the rejected request from state
             setParentRequests(prev => prev.filter(req => req._id !== requestId));
             
+            // Notify parent via socket
+            if (socket) {
+                socket.emit('parent-request-rejected', {
+                    parentId: parentId,
+                    userId: user?._id,
+                    userName: `${user?.fullname?.firstname} ${user?.fullname?.lastname}`,
+                    requestId: requestId
+                });
+            }
             
             addNotification('Parent request rejected successfully.', 'info');
             
@@ -371,34 +445,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             setIsLoadingRequests(false);
         }
     };
-    
-    // Refresh user data after parent changes
-    // In Home.jsx, update refreshUserData function
-    const refreshUserData = async () => {
-        try {
-            const token = localStorage.getItem('tokenUser');
-            const response = await axios.get(
-                `${import.meta.env.VITE_BASE_URL}/users/profile`,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    timeout: 10000
-                }
-            );
-            
-            console.log("Refreshed user data:", response.data);
-            
-            if (response.data.user) {
-                setUser(response.data.user);
-                if (response.data.user.parentId) {
-                    await fetchCurrentParent();
-                } else {
-                    setCurrentParent(null);
-                }
-            }
-        } catch (error) {
-            console.error('Error refreshing user data:', error);
-        }
-    };
+
     // Remove current parent
     const removeParent = async () => {
         if (!user?.parentId) {
@@ -413,6 +460,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
         try {
             setIsLoadingParent(true);
             const token = localStorage.getItem('tokenUser');
+            const oldParentId = user.parentId;
             
             const response = await axios.delete(
                 `${import.meta.env.VITE_BASE_URL}/users/remove-parent`,
@@ -422,28 +470,35 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
                 }
             );
             
-            console.log("Remove parent response:", response);
+            console.log("Remove parent response:", response.data);
             
-            // Update user context
-            setUser(prev => ({
-                ...prev,
-                parentId: null
-            }));
-            
-            // Update current parent state
-            setCurrentParent(null);
-            
-            // Close menu
-            setShowParentMenu(false);
-            
-            // Notify parent via socket
-            socket.emit('parent-removed', {
-                parentId: user.parentId,
-                userId: user._id,
-                userName: `${user.fullname.firstname} ${user.fullname.lastname}`
-            });
-            
-            addNotification('Parent removed successfully', 'success');
+            if (response.data && response.data.user) {
+                // Update user context
+                setUser(response.data.user);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                
+                // Emit socket event to notify parent
+                if (socket) {
+                    socket.emit('parent-removed', {
+                        parentId: oldParentId,
+                        userId: user._id,
+                        userName: `${user.fullname.firstname} ${user.fullname.lastname}`,
+                        userEmail: user.email
+                    });
+                    
+                    // Also emit success event to self
+                    socket.emit('parent-removed-success', {
+                        parentId: oldParentId,
+                        userId: user._id
+                    });
+                }
+                
+                // Update current parent state
+                setCurrentParent(null);
+                setShowParentMenu(false);
+                
+                addNotification('Parent removed successfully', 'success');
+            }
             
         } catch (error) {
             console.error('Error removing parent:', error);
@@ -454,6 +509,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
         }
     };
 
+    // Form handlers
     const handlePickupChange = async (e) => {
         setPickup(e.target.value);
     };
@@ -464,8 +520,6 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
 
     const submitHandler = (e) => {
         e.preventDefault();
-        // console.log("pickup", pickup);
-        // console.log("destination", destination);
     };
 
     // GSAP animations
@@ -567,6 +621,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
         }
     }, [showParentMenu]);
 
+    // Find trip function
     async function findTrip() {
         if (!pickup || !destination) {
             addNotification('Please enter both pickup and destination locations', 'error');
@@ -595,6 +650,7 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
         }
     }
 
+    // Create ride function
     async function createRide() {
         console.log("create ride called");
 
@@ -603,7 +659,6 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             return;
         }
 
-        // Make sure pickup and destination are objects with address property
         const rideData = {
             pickup: {
                 address: typeof pickup === "string" ? pickup : pickup.address
@@ -632,7 +687,6 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
             setRide(response.data.ride || response.data);
             addNotification('Ride created successfully! Looking for captain...', 'success');
 
-            console.log("Ride_id ", response.data._id);
             return response.data;
 
         } catch (error) {
@@ -687,6 +741,14 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
     return (
         <div className='h-screen bg-gradient-to-b from-gray-900 via-black to-blue-900 relative overflow-hidden'>
             <style>{styles}</style>
+
+            {/* Socket Connection Status */}
+            {!socketConnected && (
+                <div className="absolute top-2 left-2 z-50 bg-yellow-500 text-black px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    Connecting...
+                </div>
+            )}
 
             {/* Parent Management Button */}
             <div className="absolute top-4 right-4 z-50" ref={parentMenuRef}>
@@ -833,14 +895,6 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
                     removeNotification={removeNotification} 
                 />
             </Suspense>
-
-            {/* Parent Requests Badge */}
-            {/* <Suspense fallback={null}>
-                <ParentRequestsBadge 
-                    parentRequests={parentRequests}
-                    setShowParentRequests={setShowParentRequests}
-                />
-            </Suspense> */}
 
             {/* Parent Requests Panel */}
             <Suspense fallback={null}>
@@ -992,8 +1046,6 @@ delay state change so UI transiton can happen, prevent heavy computation on firs
                     />
                 </Suspense>
             </div>
-
-      
         </div>
     );
 };

@@ -15,7 +15,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Pink theme icons - custom markers
+// Custom icons
 const childIcon = new L.Icon({
   ...L.Icon.Default.prototype.options,
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
@@ -72,89 +72,108 @@ const ParentHome = () => {
   const [selectedChild, setSelectedChild] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [rideHistory, setRideHistory] = useState([]);
-  const [childStats, setChildStats] = useState({});
   const [userEmail, setUserEmail] = useState('');
-  const [childLocation, setChildLocation] = useState(null);
+  // const [childLocation, setChildLocation] = useState(null);
   const [currentRide, setCurrentRide] = useState(null);
   const [captainLocation, setCaptainLocation] = useState(null);
   const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]);
   const [notifications, setNotifications] = useState([]);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [showRideHistory, setShowRideHistory] = useState(false);
-  const [showChildDetails, setShowChildDetails] = useState(null);
   const [pulseAnimation, setPulseAnimation] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+
+
 
   const { socket } = useContext(SocketContext);
   const { parent } = useContext(ParentDataContext);
+
+
+
+
+
   const mapRef = useRef();
-  
-  // New refs to track mounted state and prevent duplicate logs
   const isMounted = useRef(false);
   const hasJoined = useRef(false);
   const isLoadingData = useRef(false);
+  const socketCleanupRef = useRef({});
+  const selectedChildRef = useRef(selectedChild);
+
+
+
+
+  // Update ref when selectedChild changes
+  useEffect(() => {
+    selectedChildRef.current = selectedChild;
+  }, [selectedChild]);
 
   // Track mouse movement for parallax effect
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, 
+  []);
 
-  // Load parent data on component mount - optimized with useCallback
-  const loadParentData = useCallback(async () => {
-    if (isLoadingData.current) return; // Prevent concurrent calls
-    
-    try {
-      isLoadingData.current = true;
-      setIsLoading(true);
-      const token = localStorage.getItem('tokenParent');
+    // Load parent data on component mount - optimized with useCallback
+    const loadParentData = async () => {
+      if (isLoadingData.current) return;
       
-      // Get parent profile
-      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/parents/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000
-      });
-      
-      console.log("Parent profile response:", response.data);
-      
-      // Correctly extract parent data
-      const parentData = response.data.parent;
-      if (parentData && parentData.children) {
-        setChildren(parentData.children || []);
-      } else {
-        setChildren([]);
+      try {
+        isLoadingData.current = true;
+        setIsLoading(true);
+        setIsRefreshing(true);
+        const token = localStorage.getItem('tokenParent');
+        
+        // Get parent profile
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/parents/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000
+        });
+        
+        console.log("Parent profile response:", response.data);
+        
+        const parentData = response.data.parent;
+        if (parentData && parentData.children) {
+          setChildren(parentData.children || []);
+        } else {
+          setChildren([]);
+        }
+        
+        // Load pending requests
+        const requestsResponse = await axios.get(`${import.meta.env.VITE_BASE_URL}/parents/pending-requests`, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000
+        });
+        
+        console.log("Pending requests response:", requestsResponse.data);
+        
+        if (requestsResponse.data && requestsResponse.data.requests) {
+          setPendingRequests(requestsResponse.data.requests || []);
+        } else {
+          setPendingRequests([]);
+        }
+        
+      } catch (error) {
+        console.error('Error loading parent data:', error);
+        console.error('Error details:', error.response?.data || error.message);
+        addNotification('Error loading parent data: ' + (error.response?.data?.message || error.message), 'error');
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+        isLoadingData.current = false;
       }
-      
-      // Load pending requests
-      const requestsResponse = await axios.get(`${import.meta.env.VITE_BASE_URL}/parents/pending-requests`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000
-      });
-      
-      console.log("Pending requests response:", requestsResponse.data);
-      
-      // Correctly extract pending requests
-      if (requestsResponse.data && requestsResponse.data.requests) {
-        setPendingRequests(requestsResponse.data.requests || []);
-      } else {
-        setPendingRequests([]);
-      }
-      
-    } catch (error) {
-      console.error('Error loading parent data:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      addNotification('Error loading parent data: ' + (error.response?.data?.message || error.message), 'error');
-    } finally {
-      setIsLoading(false);
-      isLoadingData.current = false;
-    }
-  }, []);
+  }
 
   // Load ride history for a child
   const loadRideHistory = async (childId) => {
     try {
+      console.log("loadRideHistory called for childId:",childId);
       const token = localStorage.getItem('tokenParent');
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/parents/child-rides/${childId}`,
@@ -163,6 +182,7 @@ const ParentHome = () => {
           timeout: 10000
         }
       );
+      console.log("Ride history response:", response.data);
       setRideHistory(response.data.rides || []);
     } catch (error) {
       console.error('Error loading ride history:', error);
@@ -170,29 +190,230 @@ const ParentHome = () => {
     }
   };
 
-  // Load child statistics
-  const loadChildStats = async (childId) => {
-    try {
-      const token = localStorage.getItem('tokenParent');
 
-      // currently route not made
-      const response = await axios.get(
-        `${import.meta.env.VITE_BASE_URL}/parents/child-stats/${childId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000
-        }
-      );
-      setChildStats(prev => ({
-        ...prev,
-        [childId]: response.data.stats
-      }));
-    } catch (error) {
-      console.error('Error loading child stats:', error);
+
+  // EFFECT 1: Initial socket connection and independent events
+  useEffect(() => {
+    if (!parent || !socket || isMounted.current) return;
+    
+    isMounted.current = true;
+    
+    // Only join once
+    // MOVE IT TO SEPARET USE EFFECT
+    // Initial join
+    if (!hasJoined.current && socket.connected) {
+        socket.emit("join", { userType: "parent", userId: parent._id });
+        hasJoined.current = true;
+        console.log(`Parent ${parent._id} joined with socket ${socket.id}`);
     }
-  };
 
-  // Enhanced Notification system with animations
+    
+    // Load initial data
+    loadParentData();
+    
+    // Clean up previous listeners
+    Object.values(socketCleanupRef.current).forEach(cleanup => cleanup?.());
+    
+    // Define event handlers
+    const handleParentRequestAccepted = (data) => {
+      console.log('Parent request accepted:', data);
+      addNotification(`${data.userName} accepted your parent request!`, 'success');
+      loadParentData();
+    };
+
+    const handleParentRequestRejected = (data) => {
+      console.log('Parent request rejected:', data);
+      addNotification(`${data.userName} rejected your parent request.`, 'error');
+      
+      // Update pending requests
+      setPendingRequests(prev => prev.filter(req => {
+        const userId = req.userId?._id || req.userId;
+        return userId !== data.userId && req._id !== data.requestId;
+      }));
+      
+      // Also refresh from server to ensure consistency
+      setTimeout(() => loadParentData(), 500);
+    };
+
+    const handleChildRemovedNotification = (data) => {
+      console.log('Child removed notification received:', data);
+      
+      // Remove child from children list
+      setChildren(prev => prev.filter(child => 
+        child._id !== data.userId && child.email !== data.userEmail
+      ));
+      
+      // If the removed child was selected, clear the selection
+      const currentSelected = selectedChildRef.current;
+      if (currentSelected && (currentSelected._id === data.userId || currentSelected.email === data.userEmail)) {
+        setSelectedChild(null);
+        // setChildLocation(null);
+        setCurrentRide(null);
+        setCaptainLocation(null);
+      }
+      
+      addNotification(`❌ ${data.userName} (${data.userEmail}) has removed you as their parent.`, 'error', true);
+      
+      // Also refresh from server
+      setTimeout(() => loadParentData(), 500);
+    };
+
+
+    // NEW: Handle children list updates from server
+    const handleChildrenListUpdated = (data) => {
+      console.log('Children list updated event received:', data);
+      loadParentData();
+      addNotification('Children list updated, new child added', 'info');
+    };
+
+
+    // NEW: Handle refresh children list request
+    const handleRefreshChildrenList = (data) => {
+      console.log('Refresh children list event received:', data);
+      loadParentData();
+    };
+    
+
+    // NEW: Handle pending requests updates
+    const handlePendingRequestsUpdated = (data) => {
+      console.log('Pending requests updated event received:', data);
+      loadParentData();
+    };
+
+
+
+    // Socket connection events
+    const handleSocketConnected = () => {
+      console.log('Socket connected');
+      setSocketConnected(true);
+      if (parent?._id) {
+        socket.emit("join", { userType: "parent", userId: parent._id });
+      }
+      // loadParentDatat();
+    };
+
+    const handleSocketDisconnected = () => {
+      console.log('Socket disconnected');
+      setSocketConnected(false);
+    };
+
+    const handleSocketError = (error) => {
+      console.error('Socket error:', error);
+      addNotification('Connection error. Please check your internet.', 'error');
+    };
+
+
+    // Set up independent event listeners
+    socket.on('parent-request-accepted-notification', handleParentRequestAccepted);
+    socket.on('parent-request-rejected-notification', handleParentRequestRejected);
+    socket.on('child-removed-notification', handleChildRemovedNotification);
+    socket.on('children-list-updated', handleChildrenListUpdated);
+    socket.on('refresh-children-list', handleRefreshChildrenList);
+    socket.on('pending-requests-updated', handlePendingRequestsUpdated);
+    socket.on('connect', handleSocketConnected);
+    socket.on('disconnect', handleSocketDisconnected);
+    socket.on('error', handleSocketError);
+    socket.on('connect_error', handleSocketError);
+
+    // Store cleanup functions
+    socketCleanupRef.current = {
+      parentRequestAccepted: () => socket.off('parent-request-accepted-notification', handleParentRequestAccepted),
+      parentRequestRejected: () => socket.off('parent-request-rejected-notification', handleParentRequestRejected),
+      childRemovedNotification: () => socket.off('child-removed-notification', handleChildRemovedNotification),
+      childrenListUpdated: () => socket.off('children-list-updated', handleChildrenListUpdated),
+      refreshChildrenList: () => socket.off('refresh-children-list', handleRefreshChildrenList),
+      pendingRequestsUpdated: () => socket.off('pending-requests-updated', handlePendingRequestsUpdated),
+      connect: () => socket.off('connect', handleSocketConnected),
+      disconnect: () => socket.off('disconnect', handleSocketDisconnected),
+      error: () => socket.off('error', handleSocketError),
+      connectError: () => socket.off('connect_error', handleSocketError)
+    };
+
+    // Cleanup function
+    return () => {
+      Object.values(socketCleanupRef.current).forEach(cleanup => cleanup?.());
+    };
+  }, [parent, socket, loadParentData]);
+
+
+  // EFFECT 2: Child-specific socket events (only runs when selectedChild changes)
+  useEffect(() => {
+    if (!socket || !selectedChild) return;
+
+    // Clean up previous child-specific listeners
+    const childCleanupRef = {};
+
+
+
+    const handleCaptainLocationUpdate = (data) => {
+      console.log('Captain location updated:', data);
+      if (data.userId === selectedChild._id) {
+        setCaptainLocation(data.locationCaptain);
+        setPulseAnimation(true);
+        setTimeout(() => setPulseAnimation(false), 1000);
+      }
+    };
+
+    const handleChildRideStarted = (data) => {
+      console.log(`${data.childName} has started ride:`, data);
+      if (data.childId === selectedChild._id) {
+        setCurrentRide(data.ride);
+        addNotification(`🚗 Ride started for ${data.childName}`, 'success');
+      }
+    };
+
+    const handleChildRideOngoing = (data) => {
+      console.log(`${data.childName}'s ride ongoing:`, data);
+      if (data.userId === selectedChild._id) {
+        addNotification(`Ride ongoing for ${data.userName} with captain ${data.captain.name}`, 'info');
+      }
+    };
+
+    const handleChildRideEnded = (data) => {
+      console.log('Child ride ended:', data);
+      if (data.userId === selectedChild._id) {
+        setCurrentRide(null);
+        setCaptainLocation(null);
+        addNotification(`Ride completed for ${data.userName}. Fare: ₹${data.fare}`, 'success');
+        loadRideHistory(data.userId);
+      }
+    };
+
+    const handleRideAcceptedNotification = (notification) => {
+      console.log('Ride accepted notification:', notification);
+      addNotification(notification.message, 'success');
+    };
+
+    // Set up child-specific event listeners
+
+    // LET PAR TO TRACK ONLY CAPTAIN LOCATION
+    // socket.on('child-location-updated', handleChildLocationUpdate);
+
+    socket.on('captain-location-update-notifyPar', handleCaptainLocationUpdate);
+    socket.on('child-ride-started', handleChildRideStarted);
+    socket.on('child-ride-ongoing', handleChildRideOngoing);
+    socket.on('child-ride-ended', handleChildRideEnded);
+    socket.on('ride-accepted-notification', handleRideAcceptedNotification);
+
+    // Store cleanup functions
+    childCleanupRef.current = {
+      // childLocationUpdated: () => socket.off('child-location-updated', handleChildLocationUpdate),
+      captainLocationUpdate: () => socket.off('captain-location-update-notifyPar', handleCaptainLocationUpdate),
+      childRideStarted: () => socket.off('child-ride-started', handleChildRideStarted),
+      childRideOngoing: () => socket.off('child-ride-ongoing', handleChildRideOngoing),
+      childRideEnded: () => socket.off('child-ride-ended', handleChildRideEnded),
+      rideAcceptedNotification: () => socket.off('ride-accepted-notification', handleRideAcceptedNotification)
+    };
+
+    // Cleanup function for child-specific events
+    return () => {
+      Object.values(childCleanupRef.current).forEach(cleanup => cleanup?.());
+    };
+  }, [socket, selectedChild]);
+
+
+  // NOTIFICATION============================================================================
+
   const addNotification = (message, type = 'info', urgent = false) => {
     const id = Date.now();
     const notification = { 
@@ -219,131 +440,6 @@ const ParentHome = () => {
     }
   };
 
-  // EFFECT 1: Initial join and load data (runs once)
-  useEffect(() => {
-    if (!parent || !socket || isMounted.current) return;
-    
-    isMounted.current = true;
-    
-    // Only join once
-    if (!hasJoined.current) {
-      socket.emit('parent-join', parent._id);
-      hasJoined.current = true;
-      console.log(`Parent ${parent._id} joined with socket ${socket.id}`);
-    }
-    
-    // Load initial data
-    loadParentData();
-    
-    // Event handlers that are independent of selectedChild
-    const handleParentRequestAccepted = (data) => {
-      console.log('Parent request accepted:', data);
-      addNotification(`${data.userName} accepted your parent request!`, 'success');
-      loadParentData();
-    };
-
-    const handleParentRequestRejected = (data) => {
-      console.log('Parent request rejected:', data);
-      addNotification(`${data.userName} rejected your parent request.`, 'error');
-      setPendingRequests(prev => prev.filter(req => 
-        !(req.userId === data.userId || req._id === data.requestId)
-      ));
-    };
-
-    const handleSocketError = (error) => {
-      console.error('Socket error:', error);
-      addNotification('Connection error. Please check your internet.', 'error');
-    };
-
-    // Set up independent event listeners
-    socket.on('parent-request-accepted-notification', handleParentRequestAccepted);
-    socket.on('parent-request-rejected-notification', handleParentRequestRejected);
-    socket.on('error', handleSocketError);
-    socket.on('connect_error', handleSocketError);
-
-    // Cleanup function
-    return () => {
-      socket.off('parent-request-accepted-notification', handleParentRequestAccepted);
-      socket.off('parent-request-rejected-notification', handleParentRequestRejected);
-      socket.off('error', handleSocketError);
-      socket.off('connect_error', handleSocketError);
-    };
-  }, [parent, socket, loadParentData]);
-
-  // EFFECT 2: Child-specific socket events (only runs when selectedChild changes)
-  useEffect(() => {
-    if (!socket || !selectedChild) return;
-
-    // Child-specific event handlers
-    const handleChildLocationUpdate = (data) => {
-      console.log('Child location updated:', data);
-      if (data.userId === selectedChild._id) {
-        setChildLocation(data.location);
-        setMapCenter([data.location.coordinates[1], data.location.coordinates[0]]);
-        addNotification(`${data.userName}'s location updated`, 'info');
-      }
-    };
-
-    const handleCaptainLocationUpdate = (data) => {
-      console.log('Captain location updated:', data);
-      if (data.childId === selectedChild._id) {
-        setCaptainLocation(data.location);
-        setPulseAnimation(true);
-        setTimeout(() => setPulseAnimation(false), 1000);
-      }
-    };
-
-    const handleChildRideStarted = (data) => {
-      console.log('Child ride started:', data);
-      if (data.childId === selectedChild._id) {
-        setCurrentRide(data.ride);
-        addNotification(`🚗 Ride started for ${data.childName}`, 'success');
-        // loadRideHistory(data.childId);
-      }
-    };
-
-    const handleChildRideOngoing = (data) => {
-      console.log('Child ride ongoing:', data);
-      if (data.childId === selectedChild._id) {
-        addNotification(`Ride ongoing for ${data.childName} with captain ${data.captain.name}`, 'info');
-      }
-    };
-
-    const handleChildRideEnded = (data) => {
-      console.log('Child ride ended:', data);
-      if (data.childId === selectedChild._id) {
-        setCurrentRide(null);
-        setCaptainLocation(null);
-        addNotification(`Ride completed for ${data.childName}. Fare: ₹${data.fare}`, 'success');
-        loadRideHistory(data.childId);
-        loadChildStats(selectedChild._id);
-      }
-    };
-
-    const handleRideAcceptedNotification = (notification) => {
-      console.log('Ride accepted notification:', notification);
-      addNotification(notification.message, 'success');
-    };
-
-    // Set up child-specific event listeners
-    socket.on('child-location-updated', handleChildLocationUpdate);
-    socket.on('captain-location-update', handleCaptainLocationUpdate);
-    socket.on('child-ride-started', handleChildRideStarted);
-    socket.on('child-ride-ongoing', handleChildRideOngoing);
-    socket.on('child-ride-ended', handleChildRideEnded);
-    socket.on('ride-accepted-notification', handleRideAcceptedNotification);
-
-    // Cleanup function for child-specific events
-    return () => {
-      socket.off('child-location-updated', handleChildLocationUpdate);
-      socket.off('captain-location-update', handleCaptainLocationUpdate);
-      socket.off('child-ride-started', handleChildRideStarted);
-      socket.off('child-ride-ongoing', handleChildRideOngoing);
-      socket.off('child-ride-ended', handleChildRideEnded);
-      socket.off('ride-accepted-notification', handleRideAcceptedNotification);
-    };
-  }, [socket, selectedChild]);
-
   const removeNotification = (id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
   };
@@ -360,6 +456,13 @@ const ParentHome = () => {
     setNotifications([]);
   };
 
+  // NOTIFICATION END============================================================================
+
+   
+
+
+
+  // REQUEST HANDLERS============================================================================
   const sendChildRequest = async (e) => {
     e.preventDefault();
     if (!userEmail.trim()) {
@@ -382,10 +485,12 @@ const ParentHome = () => {
         }
       );
 
-      const requestId=response.data.requestId;
+      const requestId = response.data.requestId;
       
       addNotification('Request sent successfully!', 'success');
       setUserEmail('');
+      
+      // Refresh data
       loadParentData();
 
       // Notify user via socket
@@ -393,7 +498,7 @@ const ParentHome = () => {
         socket.emit('parent-request-sent', {
           userEmail: userEmail,
           parentId: parent._id,
-          requestId:requestId
+          requestId: requestId
         });
       }
 
@@ -406,86 +511,89 @@ const ParentHome = () => {
     }
   };
 
-  const acceptChildRequest = async (requestId) => {
+  const cancelRequest = async (requestId) => {
     try {
       const token = localStorage.getItem('tokenParent');
-      await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/parents/add-child`, 
-        { requestId }, 
-        { 
+      
+      // First get the request details before cancelling
+      const request = pendingRequests.find(req => req._id === requestId);
+      
+      if (!request) {
+        addNotification('Request not found', 'error');
+        return;
+      }
+      
+      await axios.delete(
+        `${import.meta.env.VITE_BASE_URL}/parents/cancel-request/${requestId}`, 
+        {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000
         }
       );
-      addNotification('Child added successfully!', 'success');
-      loadParentData();
+      
+      addNotification('Request cancelled successfully', 'info');
+      
+      // Update local state immediately
+      setPendingRequests(prev => prev.filter(req => req._id !== requestId));
+      
+      // Emit socket event to notify user
+      if (socket && request && request.userId) {
+        socket.emit('parent-request-cancelled', {
+          requestId: requestId,
+          parentId: parent?._id,
+          parentName: `${parent?.fullname?.firstname} ${parent?.fullname?.lastname}`,
+          userId: request.userId,
+          timestamp: new Date()
+        });
+      }
+      
+      // Refresh from server to ensure consistency
+      setTimeout(() => loadParentData(), 500);
+      
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Error accepting request';
+      const errorMessage = error.response?.data?.message || 'Error cancelling request';
       addNotification(errorMessage, 'error');
     }
   };
 
-  const cancelRequest = async (requestId) => {
-    try {
-        const token = localStorage.getItem('tokenParent');
-        
-        // First get the request details before cancelling
-        const request = pendingRequests.find(req => req._id === requestId);
-        
-        await axios.delete(
-            `${import.meta.env.VITE_BASE_URL}/parents/cancel-request/${requestId}`, 
-            {
-                headers: { Authorization: `Bearer ${token}` },
-                timeout: 10000
-            }
-        );
-        
-        addNotification('Request cancelled successfully', 'info');
-        
-        // Emit socket event to notify user
-        if (socket && request && request.userId) {
-            socket.emit('parent-request-cancelled', {
-                requestId: requestId,
-                parentId: parent?._id,
-                parentName: `${parent?.fullname?.firstname} ${parent?.fullname?.lastname}`,
-                userId: request.userId,
-                timestamp: new Date()
-            });
-        }
-        
-        loadParentData();
-    } catch (error) {
-        const errorMessage = error.response?.data?.message || 'Error cancelling request';
-        addNotification(errorMessage, 'error');
-    }
-  };
-
-
   const removeChild = async (childId) => {
     try {
       const token = localStorage.getItem('tokenParent');
-      await axios.delete(
+      const response = await axios.delete(
         `${import.meta.env.VITE_BASE_URL}/parents/remove-child/${childId}`, 
         {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000
         }
       );
-      setChildren(children.filter(child => child._id !== childId));
+      
+      // Update local state immediately
+      setChildren(prev => prev.filter(child => child._id !== childId));
+      
       if (selectedChild?._id === childId) {
         setSelectedChild(null);
-        setChildLocation(null);
+        // setChildLocation(null);
         setCurrentRide(null);
         setCaptainLocation(null);
       }
+      
       addNotification('Child removed successfully!', 'success');
+      
+      // Also refresh from server
+      setTimeout(() => loadParentData(), 500);
+      
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Error removing child';
       addNotification(errorMessage, 'error');
     }
   };
 
-  const trackChildLocation = async (childId) => {
+  // REQUEST HANDLERS============================================================================
+
+
+
+
+  const trackChildCaptainLocation = async (childId) => {
     try {
       const token = localStorage.getItem('tokenParent');
       const response = await axios.get(
@@ -496,26 +604,31 @@ const ParentHome = () => {
         }
       );
       
-      setChildLocation(response.data.location);
+      // setChildLocation(response.data.location);
+      // setCaptainLocation(response.data.captainLocation);
+      setCaptainLocation(response.data.currentRide?.captain.location);
       setCurrentRide(response.data.currentRide);
       
       // Find the child object
       const child = children.find(c => c._id === childId);
-      setSelectedChild(child);
+      if (child) {
+        setSelectedChild(child);
+      }
 
       // Update map center
       if (response.data.location) {
         setMapCenter([
-          response.data.location.coordinates[1],
-          response.data.location.coordinates[0]
+          // response.data.location.coordinates[1],
+          // response.data.location.coordinates[0]
+          response.data.currentRide?.captain.location.coordinates[1],
+          response.data.currentRide?.captain.location.coordinates[0]
         ]);
       }
 
-      // Load child stats
-      loadChildStats(childId);
+      // Load child stats and history
       loadRideHistory(childId);
 
-      addNotification(`Now tracking ${child.fullname?.firstname}'s location`, 'success');
+      addNotification(`Now tracking ${child?.fullname?.firstname}'s location via captain location`, 'success');
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Error tracking child location';
       addNotification(errorMessage, 'error');
@@ -544,12 +657,20 @@ const ParentHome = () => {
     return [];
   };
 
-  const sendMessageToCaptain = () => {
+  const sendMessageToChild = () => {
     if (!currentRide?.captain) {
       addNotification('No captain assigned to current ride', 'error');
       return;
     }
     addNotification(`Message feature coming soon for Captain ${currentRide.captain.fullname?.firstname}`, 'info');
+  };
+
+  // Manual refresh function
+  const manualRefresh = () => {
+    loadParentData();
+    if (selectedChild) {
+      trackChildCaptainLocation(selectedChild._id);
+    }
   };
 
   // Notification Toast Component with animations
@@ -619,10 +740,11 @@ const ParentHome = () => {
     </div>
   );
 
-  if (isLoading) {
+  if (isLoading && children.length === 0 && pendingRequests.length === 0) {
     return (
       <div className='flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-black to-purple-900 relative overflow-hidden'>
-        {/* Animated background */}
+        
+        {/* floating particles */}
         <div className='absolute inset-0'>
           {[...Array(20)].map((_, i) => (
             <div
@@ -654,6 +776,8 @@ const ParentHome = () => {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-900 via-black to-purple-900 relative overflow-hidden'>
+      
+
       {/* Animated background elements */}
       <div className='absolute inset-0 z-0'>
         {/* Floating particles */}
@@ -747,25 +871,50 @@ const ParentHome = () => {
       <NotificationToast />
       
       <div className='relative z-10 max-w-7xl mx-auto p-6'>
-        {/* Header*/}
+        {/* Header */}
         <div className='flex justify-between items-center mb-8 animate-slideInUp'
           style={{ animationDelay: '100ms' }}
         >
           <div className='group relative'>
             <div className='absolute -inset-4 bg-gradient-to-r from-pink-600/20 to-purple-600/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500'></div>
-            <div className='relative'>
-              <h1 
-              className='text-4xl font-bold text-white' 
-              >
-                Parent Dashboard
-              </h1>
-              <p className='text-white/60 mt-2 flex items-center gap-2 group-hover:text-white/80 transition-colors'>
-                <i className="ri-user-heart-line text-pink-400 animate-pulse"></i>
-                Welcome back, <span className='text-pink-300 font-semibold'>{parent?.fullname?.firstname}</span>
-              </p>
+            <div className='relative flex items-center gap-4'>
+              <div>
+                <h1 className='text-4xl font-bold text-white'>
+                  Parent Dashboard
+                </h1>
+                <p className='text-white/60 mt-2 flex items-center gap-2 group-hover:text-white/80 transition-colors'>
+                  <i className="ri-user-heart-line text-pink-400 animate-pulse"></i>
+                  Welcome back, <span className='text-pink-300 font-semibold'>{parent?.fullname?.firstname}</span>
+                </p>
+              </div>
+
+              {/* refresh button */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={manualRefresh}
+                  disabled={isRefreshing}
+                  className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 transition-colors hover:scale-105 flex items-center gap-1"
+                  title="Refresh data"
+                >
+                  {isRefreshing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-400"></div>
+                      Refreshing...
+                    </>
+                  ) : (
+                    <>
+                      <i className="ri-refresh-line"></i>
+                      Refresh
+                    </>
+                  )}
+                </button>
+              </div>
+
+
             </div>
           </div>
           
+          {/* logout button */}
           <div className='flex gap-3'>
             <Link 
               to='/parent/logout' 
@@ -775,8 +924,11 @@ const ParentHome = () => {
               <i className="text-lg ri-logout-box-r-line group-hover:rotate-180 transition-transform duration-500"></i>
             </Link>
           </div>
+
         </div>
         
+        
+       
         {/* Notifications Panel */}
         {notifications.length > 0 && (
           <div className="relative group animate-slideInUp mb-6" style={{ animationDelay: '200ms' }}>
@@ -826,7 +978,7 @@ const ParentHome = () => {
           </div>
         )}
         
-        {/* Main Content Grid */}
+        {/* Send Child req  */}
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
           {/* Left Column - Forms and Lists */}
           <div className='lg:col-span-2 space-y-6'>
@@ -916,7 +1068,13 @@ const ParentHome = () => {
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            
+                            {/* <button
+                              onClick={() => acceptChildRequest(request._id)}
+                              className="relative px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 font-semibold flex items-center gap-2 shadow-lg hover:shadow-green-500/25 hover:scale-105 active:scale-95"
+                            >
+                              <i className="ri-check-line"></i>
+                              Accept
+                            </button> */}
                             <button
                               onClick={() => cancelRequest(request._id)}
                               className="relative px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-lg hover:from-rose-700 hover:to-red-700 transition-all duration-300 font-semibold flex items-center gap-2 shadow-lg hover:shadow-rose-500/25 hover:scale-105 active:scale-95"
@@ -959,7 +1117,7 @@ const ParentHome = () => {
                 ) : (
                   <div className="space-y-4">
                     {children.map((child, index) => {
-                      const stats = childStats[child._id] || {};
+                      const stats =  {};
                       return (
                         <div
                           key={child._id}
@@ -1006,21 +1164,12 @@ const ParentHome = () => {
                                     )}
                                   </p>
                                 )}
-                                {stats.totalRides > 0 && (
-                                  <div className="flex gap-4 mt-2">
-                                    <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-white/80">
-                                      {stats.totalRides} rides
-                                    </span>
-                                    <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-white/80">
-                                      ₹{stats.totalSpent || 0} spent
-                                    </span>
-                                  </div>
-                                )}
+                               
                               </div>
                             </div>
                             <div className="flex gap-2">
                               <button
-                                onClick={() => trackChildLocation(child._id)}
+                                onClick={() => trackChildCaptainLocation(child._id)}
                                 className={`relative px-4 py-2 rounded-lg transition-all duration-300 font-semibold flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 ${
                                   selectedChild?._id === child._id 
                                     ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 shadow-emerald-500/25' 
@@ -1030,13 +1179,20 @@ const ParentHome = () => {
                                 <i className={`ri-map-pin-line ${selectedChild?._id === child._id ? 'animate-bounce' : ''}`}></i>
                                 {selectedChild?._id === child._id ? 'Tracking' : 'Track'}
                               </button>
+                            
+
                               <button
-                                onClick={() => setShowChildDetails(child._id === showChildDetails ? null : child._id)}
-                                className="relative px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-300 font-semibold flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95"
+                                onClick={() => {
+                                  loadRideHistory(child._id);
+                                  setShowRideHistory(true);
+                                }}
+                                className="relative px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-lg hover:from-rose-700 hover:to-red-700 transition-all duration-300 font-semibold flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95"
                               >
-                                <i className="ri-information-line"></i>
-                                Details
+                                <i className="ri-user-unfollow-line"></i>
+                                Ride History
                               </button>
+
+                             
                               <button
                                 onClick={() => removeChild(child._id)}
                                 className="relative px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-lg hover:from-rose-700 hover:to-red-700 transition-all duration-300 font-semibold flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95"
@@ -1047,51 +1203,7 @@ const ParentHome = () => {
                             </div>
                           </div>
                           
-                          {/* Child Details Expanded View */}
-                          {showChildDetails === child._id && (
-                            <div className="mt-4 pt-4 border-t border-white/10 animate-slideInUp">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <h4 className="font-semibold text-white/80 mb-2">Ride Statistics</h4>
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm text-white/60">Total Rides</span>
-                                      <span className="font-semibold text-pink-400">{stats.totalRides || 0}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm text-white/60">This Month</span>
-                                      <span className="font-semibold text-purple-400">{stats.ridesThisMonth || 0}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm text-white/60">Total Spent</span>
-                                      <span className="font-semibold text-emerald-400">₹{stats.totalSpent || 0}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-white/80 mb-2">Actions</h4>
-                                  <div className="flex flex-wrap gap-2">
-                                    <button
-                                      onClick={() => {
-                                        loadRideHistory(child._id);
-                                        setShowRideHistory(true);
-                                      }}
-                                      className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 transition-colors hover:scale-105"
-                                    >
-                                      Ride History
-                                    </button>
-                                    <button
-                                      onClick={() => sendMessageToCaptain()}
-                                      disabled={!currentRide?.captain}
-                                      className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm hover:bg-emerald-500/30 transition-colors hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      Message Captain
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                          
                         </div>
                       );
                     })}
@@ -1101,231 +1213,194 @@ const ParentHome = () => {
             </div>
           </div>
 
-          {/* Right Column - Map and Details */}
+          {/* Right Column - Map and ride Details */}
           <div className='space-y-6'>
             {/* Map for Tracking - Animated */}
-            {selectedChild ? (
-              <div className='relative group animate-slideInUp' style={{ animationDelay: '600ms' }}>
-                <div className='absolute -inset-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500'></div>
-                <div className='relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10'>
-                  <h2 className='text-xl font-semibold mb-4 text-white flex items-center gap-2'>
-                    <div className='relative w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg animate-wave'>
-                      <i className="ri-map-pin-line text-white"></i>
-                    </div>
-                    Tracking: <span className='text-pink-300'>{selectedChild.fullname?.firstname}</span>
-                  </h2>
-                  
-                  {currentRide ? (
-                    <div className="mb-6 p-4 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-xl border border-cyan-500/30 shadow-lg">
-                      <div className="flex justify-between items-center mb-3">
-                        <h3 className="font-semibold text-white text-lg flex items-center gap-2">
-                          <i className="ri-roadster-fill text-cyan-400 animate-pulse"></i>
-                          Active Ride Details
-                        </h3>
-                        <button
-                          onClick={sendMessageToCaptain}
-                          className="relative px-3 py-1 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg hover:from-emerald-700 hover:to-green-700 transition-all duration-300 text-sm flex items-center gap-1 hover:scale-105"
-                        >
-                          <i className="ri-message-2-line"></i>
-                          Message Captain
-                        </button>
+            {selectedChild ? 
+              (
+                <div className='relative group animate-slideInUp' style={{ animationDelay: '600ms' }}>
+                  <div className='absolute -inset-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500'></div>
+                  <div className='relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10'>
+                    <h2 className='text-xl font-semibold mb-4 text-white flex items-center gap-2'>
+                      <div className='relative w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg animate-wave'>
+                        <i className="ri-map-pin-line text-white"></i>
                       </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-white/60">Status:</span>
-                          <span className="font-medium capitalize text-cyan-400">{currentRide.status}</span>
+                      Tracking: <span className='text-pink-300'>{selectedChild.fullname?.firstname}</span>
+                    </h2>
+                    
+
+                    {/* RIDE INFO=============================================== */}
+                    {currentRide ? 
+                      (
+                        <div className="mb-6 p-4 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-xl border border-cyan-500/30 shadow-lg">
+                          <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-semibold text-white text-lg flex items-center gap-2">
+                              <i className="ri-roadster-fill text-cyan-400 animate-pulse"></i>
+                              Active Ride Details
+                            </h3>
+                            <button
+                              onClick={sendMessageToChild}
+                              className="relative px-3 py-1 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg hover:from-emerald-700 hover:to-green-700 transition-all duration-300 text-sm flex items-center gap-1 hover:scale-105"
+                            >
+                              <i className="ri-message-2-line"></i>
+                              Message Child
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-white/60">Status:</span>
+                              <span className="font-medium capitalize text-cyan-400">{currentRide.status}</span>
+                            </div>
+                            {currentRide.captain && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-white/60">Captain:</span>
+                                <span className="font-medium text-white">
+                                  {currentRide.captain.name} 
+                                </span>
+                              </div>
+                            )}
+                            {currentRide.pickup && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-white/60">From:</span>
+                                <span className="font-medium text-white/90 text-right">{currentRide.pickup.address} coords: {currentRide.pickup.location.coordinates[1]} {currentRide.pickup.location.coordinates[0]}</span>
+                              </div>
+                            )}
+                            {currentRide.destination && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-white/60">To:</span>
+                                <span className="font-medium text-white/90 text-right">{currentRide.destination.address} coords: {currentRide.destination.location.coordinates[1]} {currentRide.destination.location.coordinates[0]}</span>
+                              </div>
+                            )}
+                            {currentRide.fare && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-white/60">Fare:</span>
+                                <span className="font-medium text-emerald-400">₹{currentRide.fare}</span>
+                              </div>
+                            )}
+                            {captainLocation && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-white/60">CaptainLocation:</span>
+                                <span className="font-medium text-emerald-400">{captainLocation.coordinates[1]}, {captainLocation.coordinates[0]}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {currentRide.captain && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-white/60">Captain:</span>
-                            <span className="font-medium text-white">
-                              {currentRide.captain.fullname?.firstname} {currentRide.captain.fullname?.lastname}
-                            </span>
-                          </div>
-                        )}
-                        {currentRide.pickup && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-white/60">From:</span>
-                            <span className="font-medium text-white/90 text-right">{currentRide.pickup.address}</span>
-                          </div>
-                        )}
-                        {currentRide.destination && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-white/60">To:</span>
-                            <span className="font-medium text-white/90 text-right">{currentRide.destination.address}</span>
-                          </div>
-                        )}
-                        {currentRide.fare && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-white/60">Fare:</span>
-                            <span className="font-medium text-emerald-400">₹{currentRide.fare}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mb-6 p-4 bg-gradient-to-r from-white/5 to-transparent rounded-xl border border-white/10">
-                      <p className="text-white/60 flex items-center gap-2">
-                        <i className="ri-information-line text-cyan-400"></i>
-                        No active ride - {selectedChild.fullname?.firstname} is not currently on a trip
-                      </p>
-                    </div>
-                  )}
+                      ) 
+                    : 
+                      (
+                        <div className="mb-6 p-4 bg-gradient-to-r from-white/5 to-transparent rounded-xl border border-white/10">
+                          <p className="text-white/60 flex items-center gap-2">
+                            <i className="ri-information-line text-cyan-400"></i>
+                            No active ride - {selectedChild.fullname?.firstname} is not currently on a trip
+                          </p>
+                        </div>
+                      )
+                    }
 
-                  <div className="h-96 rounded-xl overflow-hidden border border-white/20 shadow-2xl relative group/map">
-                    {/* Pulsing effect for map */}
-                    {pulseAnimation && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 animate-pulse z-10"></div>
-                    )}
-                    <MapContainer
-                      center={mapCenter}
-                      zoom={13}
-                      style={{ height: '100%', width: '100%', backgroundColor: '#1a1a2e' }}
-                      whenCreated={map => mapRef.current = map}
-                    >
-                      <MapUpdater center={mapCenter} zoom={13} />
-                      {/* Dark theme tile layer */}
-                      <TileLayer
-                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                      />
-                      
-                      {/* Child Location Marker with animation */}
-                      {childLocation && (
-                        <Marker 
-                          position={[childLocation.coordinates[1], childLocation.coordinates[0]]}
-                          icon={childIcon}
-                        >
-                          <Popup className="dark-popup">
-                            <div className="text-center p-2 bg-gray-900 text-white rounded-lg">
-                              <strong className="text-emerald-400">👤 Child Location</strong><br />
-                              {selectedChild.fullname?.firstname} {selectedChild.fullname?.lastname}<br />
-                              <em className="text-sm text-gray-400">Last updated: {new Date().toLocaleTimeString()}</em>
-                            </div>
-                          </Popup>
-                        </Marker>
+                    {/* MAP SHOWING CAPTAIN============================================= */}
+                    <div className="h-96 rounded-xl overflow-hidden border border-white/20 shadow-2xl relative group/map">
+                      {/* Pulsing effect for map */}
+                      {pulseAnimation && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 animate-pulse z-10"></div>
                       )}
 
-                      {/* Captain Location Marker with animation */}
-                      {captainLocation && (
-                        <Marker 
-                          position={[captainLocation.coordinates[1], captainLocation.coordinates[0]]}
-                          icon={captainIcon}
-                        >
-                          <Popup className="dark-popup">
-                            <div className="text-center p-2 bg-gray-900 text-white rounded-lg">
-                              <strong className="text-cyan-400">🚗 Captain</strong><br />
-                              {currentRide?.captain?.fullname?.firstname} {currentRide?.captain?.fullname?.lastname}<br />
-                              <em className="text-sm text-gray-400">Live tracking active</em>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      )}
-
-                      {/* Pickup and Destination Markers */}
-                      {currentRide && (
-                        <>
-                          {currentRide.pickup && currentRide.pickup.location && (
-                            <Marker 
-                              position={[currentRide.pickup.location.coordinates[1], currentRide.pickup.location.coordinates[0]]}
-                              icon={pickupIcon}
-                            >
-                              <Popup className="dark-popup">
-                                <div className="text-center p-2 bg-gray-900 text-white rounded-lg">
-                                  <strong className="text-amber-400">📍 Pickup Location</strong><br />
-                                  {currentRide.pickup.address}
-                                </div>
-                              </Popup>
-                            </Marker>
-                          )}
-                          {currentRide.destination && currentRide.destination.location && (
-                            <Marker 
-                              position={[currentRide.destination.location.coordinates[1], currentRide.destination.location.coordinates[0]]}
-                              icon={destinationIcon}
-                            >
-                              <Popup className="dark-popup">
-                                <div className="text-center p-2 bg-gray-900 text-white rounded-lg">
-                                  <strong className="text-rose-400">🎯 Destination</strong><br />
-                                  {currentRide.destination.address}
-                                </div>
-                              </Popup>
-                            </Marker>
-                          )}
-                        </>
-                      )}
-
-                      {/* Route Polyline */}
-                      {currentRide && captainLocation && getRoutePolyline().length > 0 && (
-                        <Polyline
-                          positions={getRoutePolyline()}
-                          color="#ec4899"
-                          weight={4}
-                          opacity={0.8}
-                          dashArray="10, 10"
+                      {/* CAPTAIN LOCATION, PICKUP POINT,DEST POINT SHOW IN MAP */}
+                      <MapContainer
+                        center={mapCenter}
+                        zoom={13}
+                        style={{ height: '100%', width: '100%', backgroundColor: '#1a1a2e' }}
+                        whenCreated={map => mapRef.current = map}
+                      >
+                        <MapUpdater center={mapCenter} zoom={13} />
+                        {/* Dark theme tile layer */}
+                        <TileLayer
+                          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                         />
-                      )}
-                    </MapContainer>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className='relative group animate-slideInUp' style={{ animationDelay: '600ms' }}>
-                <div className='absolute -inset-1 bg-gradient-to-r from-gray-600 to-gray-700 rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500'></div>
-                <div className='relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10 text-center'>
-                  <i className="ri-map-pin-line text-5xl text-white/20 mb-4"></i>
-                  <h3 className="text-lg font-semibold text-white/70 mb-2">No Child Selected</h3>
-                  <p className="text-white/50">Select a child from the list to start tracking</p>
-                </div>
-              </div>
-            )}
+                        
 
-            {/* Quick Stats - Animated */}
-            <div className='relative group animate-slideInUp' style={{ animationDelay: '700ms' }}>
-              <div className='absolute -inset-1 bg-gradient-to-r from-pink-600 to-rose-600 rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500'></div>
-              <div className='relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10'>
-                <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                  <div className='relative w-7 h-7 bg-gradient-to-br from-pink-500 to-rose-500 rounded-lg flex items-center justify-center shadow-lg'>
-                    <i className="ri-bar-chart-line text-white"></i>
+                        {/* Captain Location Marker with animation */}
+                        {captainLocation && (
+                          <Marker 
+                            position={[captainLocation.coordinates[1], captainLocation.coordinates[0]]}
+                            icon={captainIcon}
+                          >
+
+                            <Popup className="dark-popup">
+                              <div className="text-center p-2 bg-gray-900 text-white rounded-lg">
+                                <strong className="text-cyan-400">🚗 Captain</strong><br />
+                                {currentRide?.captain?.fullname?.firstname} {currentRide?.captain?.fullname?.lastname}<br />
+                                <em className="text-sm text-gray-400">Live tracking active</em>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        )}
+
+                        {/* Pickup and Destination Markers */}
+                        {currentRide && (
+                          <>
+                            {currentRide.pickup && currentRide.pickup.location && (
+                              <Marker 
+                                position={[currentRide.pickup.location.coordinates[1], currentRide.pickup.location.coordinates[0]]}
+                                icon={pickupIcon}
+                              >
+                                <Popup className="dark-popup">
+                                  <div className="text-center p-2 bg-gray-900 text-white rounded-lg">
+                                    <strong className="text-amber-400">📍 Pickup Location</strong><br />
+                                    {currentRide.pickup.address}
+                                  </div>
+                                </Popup>
+                              </Marker>
+                            )}
+                            {currentRide.destination && currentRide.destination.location && (
+                              <Marker 
+                                position={[currentRide.destination.location.coordinates[1], currentRide.destination.location.coordinates[0]]}
+                                icon={destinationIcon}
+                              >
+                                <Popup className="dark-popup">
+                                  <div className="text-center p-2 bg-gray-900 text-white rounded-lg">
+                                    <strong className="text-rose-400">🎯 Destination</strong><br />
+                                    {currentRide.destination.address}
+                                  </div>
+                                </Popup>
+                              </Marker>
+                            )}
+                          </>
+                        )}
+
+                        {/* Route Polyline */}
+                        {currentRide && captainLocation && getRoutePolyline().length > 0 && (
+                          <Polyline
+                            positions={getRoutePolyline()}
+                            color="#ec4899"
+                            weight={4}
+                            opacity={0.8}
+                            dashArray="10, 10"
+                          />
+                        )}
+                      </MapContainer>
+                    </div>
                   </div>
-                  Quick Stats
-                </h3>
-                {selectedChild ? (
-                  <div className="space-y-4">
-                    {childStats[selectedChild._id] ? (
-                      <>
-                        <div className="flex justify-between items-center">
-                          <span className="text-white/60">Total Rides</span>
-                          <span className="font-bold text-cyan-400 text-lg">{childStats[selectedChild._id].totalRides || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-white/60">This Month</span>
-                          <span className="font-bold text-emerald-400 text-lg">{childStats[selectedChild._id].ridesThisMonth || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-white/60">Total Spent</span>
-                          <span className="font-bold text-purple-400 text-lg">₹{childStats[selectedChild._id].totalSpent || 0}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-white/50 text-sm">No statistics available yet</p>
-                    )}
-                    <button
-                      onClick={() => {
-                        loadRideHistory(selectedChild._id);
-                        setShowRideHistory(true);
-                      }}
-                      className="w-full mt-4 px-4 py-2 bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-white rounded-lg hover:from-pink-500/30 hover:to-purple-500/30 transition-all duration-300 font-semibold hover:scale-105 active:scale-95 border border-pink-500/30 hover:border-pink-500/50"
-                    >
-                      View Ride History
-                    </button>
+                </div>
+              ) 
+                : 
+              (
+                <div className='relative group animate-slideInUp' style={{ animationDelay: '600ms' }}>
+                  <div className='absolute -inset-1 bg-gradient-to-r from-gray-600 to-gray-700 rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500'></div>
+                  <div className='relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10 text-center'>
+                    <i className="ri-map-pin-line text-5xl text-white/20 mb-4"></i>
+                    <h3 className="text-lg font-semibold text-white/70 mb-2">No Child Selected</h3>
+                    <p className="text-white/50">Select a child from the list to start tracking</p>
                   </div>
-                ) : (
-                  <p className="text-white/50 text-sm">Select a child to view statistics</p>
-                )}
-              </div>
-            </div>
+                </div>
+              )
+            }
+
+            
           </div>
         </div>
+
+
       </div>
 
       {/* Modal Components with enhanced animations */}
