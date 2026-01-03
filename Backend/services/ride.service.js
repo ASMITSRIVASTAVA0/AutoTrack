@@ -1,7 +1,7 @@
 const rideModel = require('../models/ride.model');
 const mapService = require('./maps.service');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+// const bcrypt = require('bcrypt');
+// const crypto = require('crypto');
 
 async function getFare(pickup, destination) {
     console.log("getFare at ride.service.js called with pickup coords:", pickup, "destination:", destination);    
@@ -9,30 +9,29 @@ async function getFare(pickup, destination) {
         throw new Error('Pickup and destination are required');
     }
 
+    // ONLY FETCH DISTANCE NOT TIME=========================================================================================
+
+
+
     const distanceTime = await mapService.getDistanceTime(pickup, destination);
     
     const baseFare = {
-        auto: 0.3,
-        car: 0.5,
-        moto: 0.2
+        auto: 10,
+        car: 20,
+        moto: 15
     };
 
-    const perKmRate = {
-        auto: 0.2,
-        car: 0.3,
-        moto: 0.1
+    const perKmRate={
+        auto:0.2,
+        car:0.5,
+        moto:0.3
     };
 
-    const perMinuteRate = {
-        auto: 0,
-        car: 0,
-        moto: 0
-    };
 
     const fare = {
-        auto: Math.round(baseFare.auto + ((distanceTime.distance.value / 1000) * perKmRate.auto) + ((distanceTime.duration.value / 60) * perMinuteRate.auto)),
-        car: Math.round(baseFare.car + ((distanceTime.distance.value / 1000) * perKmRate.car) + ((distanceTime.duration.value / 60) * perMinuteRate.car)),
-        moto: Math.round(baseFare.moto + ((distanceTime.distance.value / 1000) * perKmRate.moto) + ((distanceTime.duration.value / 60) * perMinuteRate.moto))
+        auto: Math.round(baseFare.auto + ((distanceTime.distance.value / 1000) * perKmRate.auto) ),
+        car: Math.round(baseFare.car + ((distanceTime.distance.value / 1000) * perKmRate.car) ),
+        moto: Math.round(baseFare.moto + ((distanceTime.distance.value / 1000) * perKmRate.moto) )
     };
 
     return fare;
@@ -41,67 +40,61 @@ async function getFare(pickup, destination) {
 module.exports.getFare = getFare;
 
 
-function getOtp(num) {
-    function generateOtp(num) {
-        const otp = crypto.randomInt(Math.pow(10, num - 1), Math.pow(10, num)).toString();
-        return otp;
-    }
-    return generateOtp(num);
-}
+// function getOtp(num) {
+//     function generateOtp(num) {
+//         const otp = crypto.randomInt(Math.pow(10, num - 1), Math.pow(10, num)).toString();
+//         return otp;
+//     }
+//     return generateOtp(num);
+// }
 
-module.exports.createRide = async ({
-    user, pickup, destination, vehicleType
-}) => {
-    try {
-        if (!user || !pickup || !destination || !vehicleType) {
-            throw new Error('All fields are required at ride.service.js');
-        }
+// module.exports.createRide = async ({
+//     user, pickup, destination, vehicleType, status, fare
+// }) => {
+//     try {
+        
+//         if (!pickup.lat|| !pickup.lng|| !destination.lat || !destination.lng) {
+//             throw new Error("at ride.service.js, missing lat or lng of pickup or destination");
+//         }
 
-        // Validate that we have both address and coordinates
-        if (!pickup.address || !pickup.lat || !pickup.lng) {
-            throw new Error('Pickup requires address, latitude, and longitude at ride.service.js');
-        }
+//         // const fare = await getFare(pickup, destination);
+//         // console.log('Calculated fare:', fare);  
 
-        if (!destination.address || !destination.lat || !destination.lng) {
-            throw new Error('Destination requires address, latitude, and longitude at ride.service.js');
-        }
+//         const ride = await rideModel.create({
+//             user,
+//             pickup: {
+//                 address: pickup.address,
+//                 location: {
+//                     type: 'Point',
+//                     coordinates: [
+//                         parseFloat(pickup.lng), // longitude first
+//                         parseFloat(pickup.lat)  // latitude second
+//                     ]
+//                 }
+//             },
+//             destination: {
+//                 address: destination.address,
+//                 location: {
+//                     type: 'Point',
+//                     coordinates: [
+//                         parseFloat(destination.lng), // longitude first
+//                         parseFloat(destination.lat)  // latitude second
+//                     ]
+//                 }
+//             },
+//             vehicleType,
+//             otp: getOtp(6),
+//             // fare: fare[vehicleType]
+//             status:status
+//             fare:fare
+//         });
 
-        const fare = await getFare(pickup, destination);
-        console.log('Calculated fare:', fare);  
-
-        const ride = await rideModel.create({
-            user,
-            pickup: {
-                address: pickup.address,
-                location: {
-                    type: 'Point',
-                    coordinates: [
-                        parseFloat(pickup.lng), // longitude first
-                        parseFloat(pickup.lat)  // latitude second
-                    ]
-                }
-            },
-            destination: {
-                address: destination.address,
-                location: {
-                    type: 'Point',
-                    coordinates: [
-                        parseFloat(destination.lng), // longitude first
-                        parseFloat(destination.lat)  // latitude second
-                    ]
-                }
-            },
-            vehicleType,
-            otp: getOtp(6),
-            fare: fare[vehicleType]
-        });
-
-        return ride;
-    } catch (error) {
-        console.error('Error in createRide service at ride.service.js:', error);
-        throw error;
-    }
-}
+//         return ride;
+//     } catch (error) {
+//         console.error('Error in createRide service at ride.service.js:', error);
+//         throw error;
+//     }
+// }
 
 module.exports.confirmRide = async ({
     rideId, captain
@@ -121,10 +114,10 @@ module.exports.confirmRide = async ({
         _id: rideId
     }).populate('user').populate('captain').select('+otp');
 
-    if (!ride) {
-        throw new Error('Ride not found');
-    }
+
     console.log("ride.servcie.js me Confirmed ride:", ride);
+    
+
     return ride;
 
 }

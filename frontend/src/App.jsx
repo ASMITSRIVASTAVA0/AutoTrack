@@ -29,9 +29,9 @@ including pathname(curr route via location.pathname),query params, url fragment(
 updates whenever url changes
 */
 
-import UserContext from './context/UserContext';
-import CaptainContext from './context/CaptainContext';
-import ParentContext from './context/ParentContext';
+import UserContext from './USER/context/UserContext.jsx';
+import CaptainContext from './CAPTAIN/context/CaptainContext.jsx';
+import ParentContext from './PARENT/context/ParentContext.jsx';
 
 // Lazy loading components with proper error boundaries
 const withLazy = (importFunc) => lazy(() => importFunc().catch(error => {
@@ -40,18 +40,18 @@ const withLazy = (importFunc) => lazy(() => importFunc().catch(error => {
 }));
 
 // Lazy load all components
-const Start = withLazy(() => import('./pages.startup/Start'));
-const Role = withLazy(() => import('./pages.startup/Role'));
+const Start = withLazy(() => import('./Start.jsx'));
+const Role = withLazy(() => import('./Role.jsx'));
 const TermsOfService = withLazy(() => import('./pages.other/TermsOfService.jsx'));
 const PrivaryPolicy = withLazy(() => import('./pages.other/PrivaryPolicy.jsx'));
 
 // Login pages
-const UserLogin = withLazy(() => import('./pages.login/UserLogin'));
-const Captainlogin = withLazy(() => import('./pages.login/Captainlogin'));
-const ParentLogin = withLazy(() => import('./pages.login/ParentLogin'));
+const UserLogin = withLazy(() => import('./USER/UserLogin.js'));
+const Captainlogin = withLazy(() => import('./CAPTAIN/Captainlogin.js'));
+const ParentLogin = withLazy(() => import('./PARENT/ParentLogin.js'));
 
 // Signup pages
-const UserSignup = withLazy(() => import('./pages.signup/UserSignup'));
+const UserSignup = withLazy(() => import('./USER/UserSignup.js'));
 const CaptainSignup = withLazy(() => import('./pages.signup/CaptainSignup'));
 const ParentSignup = withLazy(() => import('./pages.signup/ParentSignup'));
 
@@ -61,24 +61,24 @@ const CaptainHome = withLazy(() => import('./pages.home/CaptainHome'));
 const ParentHome = withLazy(() => import('./pages.home/ParentHome'));
 
 // Protect wrappers
-const UserProtectWrapper = withLazy(() => import('./pages.protectwrapper/UserProtectWrapper'));
-const CaptainProtectWrapper = withLazy(() => import('./pages.protectwrapper/CaptainProtectWrapper'));
-const ParentProtectWrapper = withLazy(() => import('./pages.protectwrapper/ParentProtectWrapper'));
+const UserProtectWrapper = withLazy(() => import('./USER/UserProtectWrapper.jsx'));
+const CaptainProtectWrapper = withLazy(() => import('./CAPTAIN/CaptainProtectWrapper.js'));
+const ParentProtectWrapper = withLazy(() => import('./PARENT/ParentProtectWrapper.jsx'));
 
 // Logout pages
-const UserLogout = withLazy(() => import('./pages.logout/UserLogout'));
-const CaptainLogout = withLazy(() => import('./pages.logout/CaptainLogout'));
-const ParentLogout = withLazy(() => import('./pages.logout/ParentLogout'));
+const UserLogout = withLazy(() => import('./USER/auth/UserLogout.js'));
+const CaptainLogout = withLazy(() => import('./CAPTAIN/auth/CaptainLogout.js'));
+const ParentLogout = withLazy(() => import('./PARENT/ParentLogout.js'));
 
 // Riding pages
-const Riding = withLazy(() => import('./pages.riding/Riding'));
-const CaptainRiding = withLazy(() => import('./pages.riding/CaptainRiding'));
+const Riding = withLazy(() => import('./USER/riding/Riding.jsx'));
+const CaptainRiding = withLazy(() => import('./CAPTAIN/riding/CaptainRiding.jsx'));
 
 // Captain components
-const CaptainProfile = withLazy(() => import('./components/compo.captain.info/CaptainProfile.jsx'));
-const Earnings = withLazy(() => import('./components/compo.captain.info/Earnings.jsx'));
-const RideHistory = withLazy(() => import('./components/compo.captain.info/RideHistory.jsx'));
-const Support = withLazy(() => import('./components/compo.captain.info/Support.jsx'));
+const CaptainProfile = withLazy(() => import('./pages.home/component.captain/CaptainProfile.jsx'));
+const Earnings = withLazy(() => import('./pages.home/component.captain/Earnings.jsx'));
+const RideHistory = withLazy(() => import('./pages.home/component.captain/RideHistory.jsx'));
+const Support = withLazy(() => import('./pages.home/component.captain/Support.jsx'));
 import LoadingFallback from "./optimization/LoadingFallback.jsx";
 
 // Error Boundary component
@@ -158,24 +158,24 @@ const RouteOptimizer = ({ children }) => {
       if (location.pathname === '/') {
         routesToPrefetch.push('/role');
       } else if (location.pathname === '/role') {
-        routesToPrefetch.push('/login', '/captain-login', '/parent-login');
+        routesToPrefetch.push('/login', '/captains/login', '/parents/login');
       } else if (location.pathname === '/login') {
         routesToPrefetch.push('/signup', '/home');
-      } else if (location.pathname === '/captain-login') {
-        routesToPrefetch.push('/captain-signup', '/captain-home');
-      } else if (location.pathname === '/parent-login') {
-        routesToPrefetch.push('/parent-signup', '/parent-home');
+      } else if (location.pathname === '/captains/login') {
+        routesToPrefetch.push('/captains/signup', '/captains/home');
+      } else if (location.pathname === '/parents/login') {
+        routesToPrefetch.push('/parents/signup', '/parents/home');
       }
       
       // Prefetch based on user role
       if (user) {
-        routesToPrefetch.push('/riding', '/user/logout');
+        routesToPrefetch.push('/users/riding', '/users/logout');
       }
       if (captain) {
-        routesToPrefetch.push('/captain-riding', '/captain/logout');
+        routesToPrefetch.push('/captains/users/riding', '/captains/logout');
       }
       if (parent) {
-        routesToPrefetch.push('/parent/logout');
+        routesToPrefetch.push('/parents/logout');
       }
       
       // Remove duplicates
@@ -222,7 +222,7 @@ const App = () => {
               
               {/* Captain Routes with nested routes */}
               <Route 
-                path="/captain-home" 
+                path="/captains/home" 
                 element={
                   <CaptainProtectWrapper>
                     <CaptainHome />
@@ -237,7 +237,7 @@ const App = () => {
 
               {/* Parent Routes */}
               <Route 
-                path="/parent-home" 
+                path="/parents/home" 
                 element={
                   <ParentProtectWrapper>
                     <ParentHome />
@@ -246,22 +246,22 @@ const App = () => {
               />
 
               {/* Riding Routes */}
-              <Route path='/riding' element={<Riding />} />
-              <Route path='/captain-riding' element={<CaptainRiding />} />
+              <Route path='/users/riding' element={<Riding />} />
+              <Route path='/captains/users/riding' element={<CaptainRiding />} />
 
               {/* Login Routes */}
               <Route path='/login' element={<UserLogin />} />
-              <Route path='/captain-login' element={<Captainlogin />} />
-              <Route path='/parent-login' element={<ParentLogin />} />
+              <Route path='/captains/login' element={<Captainlogin />} />
+              <Route path='/parents/login' element={<ParentLogin />} />
 
               {/* Signup Routes */}
               <Route path='/signup' element={<UserSignup />} />
-              <Route path='/captain-signup' element={<CaptainSignup />} />
-              <Route path='/parent-signup' element={<ParentSignup />} />
+              <Route path='/captains/signup' element={<CaptainSignup />} />
+              <Route path='/parents/signup' element={<ParentSignup />} />
 
               {/* Logout Routes */}
               <Route 
-                path='/user/logout'
+                path='/users/logout'
                 element={
                   <UserProtectWrapper>
                     <UserLogout />
@@ -269,7 +269,7 @@ const App = () => {
                 } 
               />
               <Route 
-                path='/captain/logout' 
+                path='/captains/logout' 
                 element={
                   <CaptainProtectWrapper>
                     <CaptainLogout />
@@ -277,7 +277,7 @@ const App = () => {
                 } 
               />
               <Route 
-                path='/parent/logout' 
+                path='/parents/logout' 
                 element={
                   <ParentProtectWrapper>
                     <ParentLogout />

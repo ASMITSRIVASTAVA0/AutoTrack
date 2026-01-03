@@ -18,42 +18,7 @@ class SocketController {
         this.maxReconnectionAttempts = 5;
     }
 
-    // Join event handler
-    // handleJoin = async (data) => {
-    //     const { userId, userType } = data;
-
-    //     try {
-    //         if (userType === 'user') {
-    //             const user = await userModel.findByIdAndUpdate(
-    //                 userId, 
-    //                 { socketId: this.socket.id, lastSeen: new Date() },
-    //                 { new: true }
-    //             );
-    //             console.log(`User ${user?.fullname?.firstname} joined with socket ${this.socket.id}`);
-    //         } else if (userType === 'captain') {
-    //             const captain = await captainModel.findByIdAndUpdate(
-    //                 userId, 
-    //                 { socketId: this.socket.id, lastSeen: new Date() },
-    //                 { new: true }
-    //             );
-    //             console.log(`Captain ${captain?.fullname?.firstname} joined with socket ${this.socket.id}`);
-    //         } else if (userType === "parent") {
-    //             const parent = await parentModel.findByIdAndUpdate(
-    //                 userId,
-    //                 { socketId: this.socket.id, lastSeen: new Date() },
-    //                 { new: true }
-    //             );
-    //             console.log(`Parent ${parent?.fullname?.firstname} joined with socket ${this.socket.id}`);
-                
-    //             // Send connected status
-    //             this.socket.emit('socket-connected', { message: 'Successfully connected to server' });
-    //         }
-    //     } catch (err) {
-    //         console.error('Error in join event:', err);
-    //         this.socket.emit('error', { message: 'Error joining socket room' });
-    //     }
-    // };
-
+    // Join event handler with room-based approach
     handleJoin = async (data) => {
         const { userId, userType } = data;
 
@@ -62,40 +27,47 @@ class SocketController {
             this.userId = userId;
             this.userType = userType;
             
+            // Get room names
+            const userRoom = `${userType}:${userId}`;
+            const userTypeRoom = `${userType}s`; // All users of this type
+            
+            // Join rooms
+            this.socket.join(userRoom);
+            this.socket.join(userTypeRoom);
+            
+            console.log(`✅ ${userType} ${userId} joined rooms:`, {
+                userRoom: userRoom,
+                userTypeRoom: userTypeRoom
+            });
+
+            // Update database with current socket ID (still useful for tracking)
             const updateData = {
                 socketId: this.socket.id,
                 lastSeen: new Date(),
                 isOnline: true
             };
 
-            if (userType === 'user') {
-                const user = await userModel.findByIdAndUpdate(
-                    userId, 
-                    updateData,
-                    { new: true }
-                );
-                console.log(`👤 User ${user?.fullname?.firstname} joined with socket ${this.socket.id}`);
-            } else if (userType === 'captain') {
-                const captain = await captainModel.findByIdAndUpdate(
-                    userId, 
-                    updateData,
-                    { new: true }
-                );
-                console.log(`🚗 Captain ${captain?.fullname?.firstname} joined with socket ${this.socket.id}`);
-            } else if (userType === "parent") {
-                const parent = await parentModel.findByIdAndUpdate(
-                    userId,
-                    updateData,
-                    { new: true }
-                );
-                console.log(`👨‍👩‍👧‍👦 Parent ${parent?.fullname?.firstname} joined with socket ${this.socket.id}`);
-                
-                // Send connected status
-                this.socket.emit('socket-connected', { 
-                    message: 'Successfully connected to server',
-                    socketId: this.socket.id 
-                });
+            switch(userType) {
+                case 'user':
+                    await userModel.findByIdAndUpdate(userId, updateData);
+                    break;
+                case 'captain':
+                    await captainModel.findByIdAndUpdate(userId, updateData);
+                    break;
+                case 'parent':
+                    await parentModel.findByIdAndUpdate(userId, updateData);
+                    break;
+                default:
+                    throw new Error(`Invalid user type: ${userType}`);
             }
+
+            // WHERE IS THIS EMIT EVENT LISTENED TO?========================================================
+            // Send connected status
+            this.socket.emit('socket-connected', { 
+                message: 'Successfully connected to server',
+                socketId: this.socket.id,
+                rooms: [userRoom, userTypeRoom]
+            });
 
             // Reset reconnection attempts on successful join
             this.reconnectionAttempts = 0;
@@ -107,62 +79,82 @@ class SocketController {
     };
 
 
-    // Captain location update handler
+    // Captain location update handler - notify parent via rooms
     handleUpdateLocationCaptain = async (data) => {
-        const { captainId, location } = data;
+        const { captainId, captainLocation } = data;
 
-        if (!location || location.lat === undefined || location.lng === undefined) {
-            console.error('Invalid locationdata=', location);
+        if (!captainLocation || !captainLocation.lat || !captainLocation.lng) {
+            console.error('at socket.controller.js, Invalid captainLocation coords');
             return this.socket.emit('error', { 
-                message: 'Invalid location data: missing latitude or longitude at socket.js' 
+                message: 'Invalid captainLocation data: missing latitude or longitude' 
             });
         }
 
         try {
+
+
             // Update captain location in database
-            await captainModel.findByIdAndUpdate(captainId, {
-                location: {
-                    type: 'Point',
-                    coordinates: [location.lng, location.lat]
+            const updatedCaptain=await captainModel.findByIdAndUpdate(
+                captainId, 
+                {
+                    location: {
+                        type: 'Point',
+                        coordinates: [captainLocation.lng, captainLocation.lat]
+                    },
                 },
-            });
+                { new: true }
+            );
+
+
             
-            console.log(`Captain ${captainId} location updated at socket.js:`, {
-                lat: location.lat,
-                lng: location.lng
+            console.log(`Captain ${updatedCaptain.fullname.firstname} captainLocation updated:`, {
+                lat: updatedCaptain.location.coordinates[1],
+                lng: updatedCaptain.location.coordinates[0]
             });
 
-            // Notify parents if this captain has an ongoing ride with their child
-            const ongoingRide = await rideModel.findOne({
-                captain: captainId,
-                status: { $in: ['accepted', 'ongoing'] }
-            }).populate('user');
 
-            if (ongoingRide && ongoingRide.user && ongoingRide.user.parentId) {
-                const parent = await parentModel.findById(ongoingRide.user.parentId);
-                
-                if (parent && parent.socketId) {
-                    this.io.to(parent.socketId).emit('captain-location-update-notifyPar', {
-                        rideId: ongoingRide._id,
-                        captainId: captainId,
-                        locationCaptain: {
-                            type: 'Point',
-                            coordinates: [location.lng, location.lat]
-                        },
-                        userId: ongoingRide.user._id,
-                        userName: `${ongoingRide.user.fullname.firstname} ${ongoingRide.user.fullname.lastname}`,
-                        timestamp: new Date()
-                    });
-                    console.log(`Notified parent ${parent._id} of captain location update at socket.js`);
+
+            // Find ongoing ride with this captain
+            // what is captain has done mulitple ride with same user
+            const ongoingRide = await rideModel.findOne(
+                {
+                    captain: captainId,
+                    status: { $in: ['accepted', 'ongoing'] }
                 }
+            ).populate('user');
+
+
+
+            // Notify parent via room
+            if (ongoingRide && ongoingRide.user && ongoingRide.user.parentId) {
+                const parentId = ongoingRide.user.parentId;
+                const parentRoom = `parent:${parentId}`;
+                
+                // Emit to parent's room
+                this.io.to(parentRoom).emit('captain-location-update-notifyPar', {
+                    rideId: ongoingRide._id,
+                    captainId: captainId,
+                    locationCaptain: {
+                        type: 'Point',
+                        coordinates: [location.lng, location.lat]
+                    },
+                    userId: ongoingRide.user._id,
+                    userName: `${ongoingRide.user.fullname.firstname} ${ongoingRide.user.fullname.lastname}`,
+                    timestamp: new Date()
+                });
+                
+                console.log(`📍 Notified parent ${parentId} in room ${parentRoom}`);
             }
         } catch (error) {
-            console.error('Error updating captain location at socket.js:', error);
-            this.socket.emit('error', { message: 'Failed to update location at socket.js' });
+            console.error('Error updating captain location:', error);
+            this.socket.emit('error', { message: 'Failed to update location' });
         }
     };
 
-    // Ride accepted handler
+    // Ride accepted handler - notify parent via room
+    // WHEN RIDE ACCEPTED, THEN FIND RIDE USING (USERiD,CAPTAINID,STATUS=ACCEPTED) THAT IS UNIQUE AND USE THIS RIDE IN handleUpdateLocationCaptain TO FIND ongoingRide
+    // ============================================================
+    
     handleRideAccepted = async (data) => {
         try {
             const { userId, rideId, captainId, captainLocation, captainName } = data;
@@ -177,38 +169,42 @@ class SocketController {
                     captainId: captainId,
                     captainName: captainName,
                     captainLocation: captainLocation,
-                    message: `A ride for your child ${user.fullname.firstname} has been accepted  by Captain: ${captainName}`,
+                    message: `A ride for your child ${user.fullname.firstname} has been accepted by Captain: ${captainName}`,
                     timestamp: new Date(),
                     read: false
                 };
 
-                // add this notification to parent.nofitications array in db
+                // Add notification to parent's database
                 await parentService.addNotification(user.parentId, notificationData);
 
-                const parent = await parentModel.findById(user.parentId);
+                // Send to parent's room
+                const parentRoom = `parent:${user.parentId}`;
+                this.io.to(parentRoom).emit('childride-accepted-notifyPar', notificationData);
+                
+                // Also send ride details for tracking
+                const ride = await rideModel.findById(rideId)
+                    .populate('captain', 'fullname vehicle location')
+                    .populate('user', 'fullname');
+                
 
-                if (parent && parent.socketId) {
-                    this.io.to(parent.socketId).emit('ride-accepted-notification', notificationData);
-                    
-                    // Also send ride details for tracking
-                    const ride = await rideModel.findById(rideId)
-                        .populate('captain', 'fullname vehicle location')
-                        .populate('user', 'fullname');
-                    
-                    this.io.to(parent.socketId).emit('child-ride-started', {
-                        childId: userId,
-                        childName: `${user.fullname.firstname} ${user.fullname.lastname}`,
-                        ride: ride,
-                        timestamp: new Date()
-                    });
-                }
+                // this will be listened at useSocketEvents.js(ParentHome.jsx frontend) and will ONLY show notification at UI,no update to par data
+                // HOW IS EMIT FROM BACKEND LISTENED TO IN FRONTEND?=============================
+                
+                this.io.to(parentRoom).emit('child-ride-started', {
+                    childId: userId,
+                    childName: `${user.fullname.firstname} ${user.fullname.lastname}`,
+                    ride: ride,
+                    timestamp: new Date()
+                });
+                
+                console.log(`✅ Ride accepted notification sent to parent room: ${parentRoom}`);
             }
         } catch (err) {
             console.error('Error notifying parent:', err);
         }
     };
 
-    // Ride started handler
+    // Ride started handler - notify parent via room
     handleRideStarted = async (data) => {
         try {
             const { rideId } = data;
@@ -217,27 +213,28 @@ class SocketController {
                 .populate('captain');
 
             if (ride && ride.user && ride.user.parentId) {
-                const parent = await parentModel.findById(ride.user.parentId);
-                if (parent && parent.socketId) {
-                    this.io.to(parent.socketId).emit('child-ride-ongoing', {
-                        userModelId: ride.user._id,
-                        userName: `${ride.user.fullname.firstname} ${ride.user.fullname.lastname}`,
-                        rideId: rideId,
-                        captain: {
-                            name: `${ride.captain.fullname.firstname} ${ride.captain.fullname.lastname}`,
-                            vehicle: ride.captain.vehicle
-                        },
-                        startedAt: new Date(),
-                        timestamp: new Date()
-                    });
-                }
+                const parentRoom = `parent:${ride.user.parentId}`;
+                
+                this.io.to(parentRoom).emit('child-ride-ongoing', {
+                    userModelId: ride.user._id,
+                    userName: `${ride.user.fullname.firstname} ${ride.user.fullname.lastname}`,
+                    rideId: rideId,
+                    captain: {
+                        name: `${ride.captain.fullname.firstname} ${ride.captain.fullname.lastname}`,
+                        vehicle: ride.captain.vehicle
+                    },
+                    startedAt: new Date(),
+                    timestamp: new Date()
+                });
+                
+                console.log(`🚗 Ride started notification to parent room: ${parentRoom}`);
             }
         } catch (err) {
-            console.error('Error notifying parent of ride start at socket.js:', err);
+            console.error('Error notifying parent of ride start:', err);
         }
     };
 
-    // Ride ended handler
+    // Ride ended handler - notify parent via room
     handleRideEnded = async (data) => {
         try {
             const { rideId } = data;
@@ -246,156 +243,170 @@ class SocketController {
                 .populate('captain');
 
             if (ride && ride.user && ride.user.parentId) {
-                const parent = await parentModel.findById(ride.user.parentId);
-                if (parent && parent.socketId) {
-                    this.io.to(parent.socketId).emit('child-ride-ended', {
-                        userId: ride.user._id,
-                        userName: `${ride.user.fullname.firstname} ${ride.user.fullname.lastname}`,
-                        rideId: rideId,
-                        fare: ride.fare,
-                        distance: ride.distance,
-                        endedAt: new Date(),
-                        timestamp: new Date()
-                    });
-                }
+                const parentRoom = `parent:${ride.user.parentId}`;
+                
+                this.io.to(parentRoom).emit('child-ride-ended', {
+                    userId: ride.user._id,
+                    userName: `${ride.user.fullname.firstname} ${ride.user.fullname.lastname}`,
+                    rideId: rideId,
+                    fare: ride.fare,
+                    distance: ride.distance,
+                    endedAt: new Date(),
+                    timestamp: new Date()
+                });
+                
+                console.log(`🏁 Ride ended notification to parent room: ${parentRoom}`);
             }
         } catch (err) {
             console.error('Error notifying parent of ride end:', err);
         }
     };
 
-    // Parent request sent handler
+    // Parent request sent handler - notify user via room
     handleParentRequestSent = async (data) => {
         try {
             const { userEmail, parentId, requestId } = data;
             const user = await userModel.findOne({ email: userEmail });
             const parent = await parentModel.findById(parentId);
 
-            if (user && user.socketId) {
-                console.log(`Parentname=${parent.fullname.firstname} request sent to user ${user.email} at socket.js`);
-                this.io.to(user.socketId).emit('parent-request-received', {
+            if (user) {
+                const userRoom = `user:${user._id}`;
+                
+                console.log(`Parent ${parent.fullname.firstname} request sent to user ${user.email}`);
+                
+                this.io.to(userRoom).emit('parent-request-received', {
                     parentId: parentId,
                     parentName: `${parent.fullname.firstname} ${parent.fullname.lastname}`,
                     requestId: requestId,
                     timestamp: new Date()
                 });
+                
+                console.log(`📨 Parent request sent to user room: ${userRoom}`);
             } else {
-                console.log(`User ${userEmail} not found or not online at socket.js`);
+                console.log(`User ${userEmail} not found`);
             }
         } catch (err) {
-            console.error('Error sending parent request notification at socket.js: ', err);
+            console.error('Error sending parent request notification:', err);
         }
     };
 
-    // Parent request accepted handler
+    // Parent request accepted handler - notify parent via room
     handleParentRequestAccepted = async (data) => {
         try {
             const { parentId, userId, userName, requestId } = data;
-            const parent = await parentModel.findById(parentId);
-
-            if (parent && parent.socketId) {
-                this.io.to(parent.socketId).emit('parent-request-accepted-notification', {
-                    userId: userId,
-                    userName: userName,
-                    requestId: requestId,
-                    timestamp: new Date()
-                });
-                console.log(`Parent ${parent.fullname.firstname} notified of request acceptance at socket.js`);
-                
-                // Update parent's pending requests
-                this.io.to(parent.socketId).emit('pending-requests-updated', {
-                    type: 'request-accepted',
-                    requestId: requestId,
-                    userId: userId,
-                    timestamp: new Date()
-                });
-            }
+            
+            // Notify parent via room
+            const parentRoom = `parent:${parentId}`;
+            
+            this.io.to(parentRoom).emit('parent-request-accepted-notification', {
+                userId: userId,
+                userName: userName,
+                requestId: requestId,
+                timestamp: new Date()
+            });
+            
+            // Also send children-list-updated event to refresh parent's UI
+            this.io.to(parentRoom).emit('children-list-updated', {
+                type: 'child-added',
+                userId: userId,
+                userName: userName,
+                timestamp: new Date()
+            });
+            
+            console.log(`✅ Parent request accepted notification to room: ${parentRoom}`);
+            
+            // Notify user via room
+            const userRoom = `user:${userId}`;
+            this.io.to(userRoom).emit('parent-status-updated', {
+                parentId: parentId,
+                status: 'connected',
+                timestamp: new Date()
+            });
+            
         } catch (err) {
-            console.error('Error notifying parent of request acceptance at socket.js:', err);
+            console.error('Error notifying parent of request acceptance:', err);
         }
     };
 
-    // Parent request rejected handler
+    // Parent request rejected handler - notify parent via room
     handleParentRequestRejected = async (data) => {
         try {
             console.log('Parent request rejection received via socket:', data);
             const { parentId, userId, userName, requestId } = data;
-            const parent = await parentModel.findById(parentId);
 
-            if (parent && parent.socketId) {
-                console.log(`Emitting parent-request-rejected-notification to parent ${parent._id}`);
-                
-                this.io.to(parent.socketId).emit('parent-request-rejected-notification', {
-                    userId: userId,
-                    userName: userName,
-                    requestId: requestId,
-                    timestamp: new Date()
-                });
-                
-                // Also emit a specific event to update pending requests
-                this.io.to(parent.socketId).emit('pending-requests-updated', {
-                    type: 'request-rejected',
-                    requestId: requestId,
-                    timestamp: new Date()
-                });
-                
-                console.log(`Parent ${parent.fullname.firstname} notified of request rejection at socket.js`);
-            }
+            // Create clean notification data
+            const notificationData = {
+                userId: userId.toString(),
+                userName: userName,
+                requestId: requestId.toString(),
+                timestamp: new Date().toISOString()
+            };
+            
+            // Send to parent's room
+            const parentRoom = `parent:${parentId}`;
+            this.io.to(parentRoom).emit('parent-request-rejected-notification', notificationData);
+            
+            console.log(`❌ Parent request rejected notification to room: ${parentRoom}`);
+            
         } catch (err) {
-            console.error('Error notifying parent of request rejection at socket.js:', err);
+            console.error('Error notifying parent of request rejection:', err);
         }
     };
 
-    // Parent request cancelled handler
+    // Parent request cancelled handler - notify user via room
     handleParentRequestCancelled = async (data) => {
         try {
             console.log('Parent request cancelled notification:', data);
+            const { userId, requestId, parentId, parentName } = data;
             
-            const user = await userModel.findById(data.userId).select('socketId');
+            const userRoom = `user:${userId}`;
             
-            if (user && user.socketId) {
-                this.io.to(user.socketId).emit('parent-request-cancelled', {
-                    requestId: data.requestId,
-                    parentId: data.parentId,
-                    parentName: data.parentName,
-                    timestamp: data.timestamp || new Date()
-                });
-                console.log(`Sent parent-request-cancelled to user ${data.userId} with socket ${user.socketId}`);
-            }
+            this.io.to(userRoom).emit('parent-request-cancelled', {
+                requestId: requestId,
+                parentId: parentId,
+                parentName: parentName,
+                timestamp: data.timestamp || new Date()
+            });
+            
+            console.log(`🗑️ Parent request cancelled to user room: ${userRoom}`);
+            
         } catch (error) {
             console.error('Error broadcasting parent request cancellation:', error);
         }
     };
 
-    // Parent removed handler
+    // Parent removed handler - notify both parties via rooms
     handleParentRemoved = async (data) => {
         try {
             console.log('Parent removal received:', data);
             const { parentId, userId, userName, userEmail } = data;
             
-            const parent = await parentModel.findById(parentId);
+            // Notify parent via room
+            const parentRoom = `parent:${parentId}`;
+            this.io.to(parentRoom).emit('child-removed-notification', {
+                userId: userId,
+                userName: userName,
+                userEmail: userEmail,
+                timestamp: new Date(),
+                message: `${userName} has removed you as their parent.`
+            });
             
-            if (parent && parent.socketId) {
-                // Send notification to parent
-                this.io.to(parent.socketId).emit('child-removed-notification', {
-                    userId: userId,
-                    userName: userName,
-                    userEmail: userEmail,
-                    timestamp: new Date(),
-                    message: `${userName} has removed you as their parent and is no longer your child.`
-                });
-                
-                console.log(`Notified parent ${parent.fullname.firstname} of removal at socket.js`);
-                
-                // Also update parent's children list in real-time
-                this.io.to(parent.socketId).emit('children-list-updated', {
-                    type: 'child-removed',
-                    userId: userId,
-                    timestamp: new Date()
-                });
-            }
+            this.io.to(parentRoom).emit('children-list-updated', {
+                type: 'child-removed',
+                userId: userId,
+                timestamp: new Date()
+            });
             
-            // Also update parent's notifications in database
+            // Notify user via room
+            const userRoom = `user:${userId}`;
+            this.io.to(userRoom).emit('parent-removed-success', {
+                parentId: parentId,
+                timestamp: new Date(),
+                message: 'Parent successfully removed',
+                hasParent: false
+            });
+            
+            // Update parent's notifications in database
             const notificationData = {
                 userId: userId,
                 userName: userName,
@@ -408,114 +419,75 @@ class SocketController {
             
             await parentService.addNotification(parentId, notificationData);
             
+            console.log(`🔗 Parent-child relationship removed, notified both rooms`);
+            
         } catch (err) {
-            console.error('Error handling parent removal notification at socket.js:', err);
+            console.error('Error handling parent removal notification:', err);
         }
     };
 
-    // Parent removed success handler
+    // Parent removed success handler (confirmation)
     handleParentRemovedSuccess = async (data) => {
         try {
             const { userId, parentId } = data;
-            const user = await userModel.findById(userId);
+            const userRoom = `user:${userId}`;
             
-            if (user && user.socketId) {
-                this.io.to(user.socketId).emit('parent-removed-success', {
-                    parentId: parentId,
-                    timestamp: new Date(),
-                    message: 'Parent successfully removed'
-                });
-            }
+            this.io.to(userRoom).emit('parent-removed-success', {
+                parentId: parentId,
+                timestamp: new Date(),
+                message: 'Parent successfully removed'
+            });
         } catch (err) {
             console.error('Error sending parent removal success:', err);
         }
     };
 
-    // Get parent requests handler
+    // Get parent requests handler - send to user room
     handleGetParentRequests = async (data) => {
         try {
             const { userId } = data;
             const user = await userModel.findById(userId).populate('pendingParentRequests.parentId');
             
-            if (user && user.socketId) {
-                this.io.to(user.socketId).emit('parent-requests-list', {
+            if (user) {
+                const userRoom = `user:${userId}`;
+                this.io.to(userRoom).emit('parent-requests-list', {
                     requests: user.pendingParentRequests || [],
                     timestamp: new Date()
                 });
             }
         } catch (err) {
-            console.error('Error getting parent requests list at socket.js:', err);
+            console.error('Error getting parent requests list:', err);
         }
     };
 
-    // Refresh children list handler
+    // Refresh children list handler - notify parent via room
     handleRefreshChildrenList = async (data) => {
         try {
             const { parentId } = data;
-            const parent = await parentModel.findById(parentId);
+            const parentRoom = `parent:${parentId}`;
             
-            if (parent && parent.socketId) {
-                this.io.to(parent.socketId).emit('refresh-children-list', {
-                    timestamp: new Date(),
-                    message: 'Children list refresh requested'
-                });
-            }
+            this.io.to(parentRoom).emit('refresh-children-list', {
+                timestamp: new Date(),
+                message: 'Children list refresh requested'
+            });
         } catch (err) {
             console.error('Error refreshing children list:', err);
         }
     };
 
     // Disconnect handler
-    // handleDisconnect = async (reason) => {
-    //     console.log(`Client disconnected: ${this.socket.id}, reason: ${reason}`);
-        
-    //     try {
-    //         // Remove socket ID from users
-    //         await userModel.findOneAndUpdate(
-    //             { socketId: this.socket.id },
-    //             { 
-    //                 $unset: { socketId: 1 },
-    //                 $set: { lastSeen: new Date() }
-    //             }
-    //         );
-            
-    //         // Remove socket ID from captains
-    //         await captainModel.findOneAndUpdate(
-    //             { socketId: this.socket.id },
-    //             { 
-    //                 $unset: { socketId: 1 },
-    //                 $set: { lastSeen: new Date() }
-    //             }
-    //         );
-            
-    //         // Remove socket ID from parents
-    //         await parentModel.findOneAndUpdate(
-    //             { socketId: this.socket.id },
-    //             { 
-    //                 $unset: { socketId: 1 },
-    //                 $set: { lastSeen: new Date() }
-    //             }
-    //         );
-    //     } catch (err) {
-    //         console.error('Error cleaning up socket ID at socket.js:', err);
-    //     }
-    // };
-
     handleDisconnect = async (reason) => {
         console.log(`🔌 Client disconnected: ${this.socket.id}, reason: ${reason}, userType: ${this.userType}, userId: ${this.userId}`);
         
         try {
-            // Don't immediately remove socket ID - wait for possible reconnection
-            // Instead, mark as offline and set a grace period
-            
+            // Mark user as offline in database
             const updateData = {
                 isOnline: false,
                 lastSeen: new Date(),
-                // We'll keep the socketId temporarily for reconnection matching
             };
 
             if (this.userType === 'user' && this.userId) {
-                // Only clear socketId if this is a server-initiated disconnect or ping timeout
+                // For client-side disconnects, keep socketId for possible reconnection
                 if (reason === 'io server disconnect' || reason === 'ping timeout') {
                     await userModel.findByIdAndUpdate(
                         this.userId,
@@ -523,12 +495,11 @@ class SocketController {
                     );
                     console.log(`❌ User ${this.userId} socket ID removed due to ${reason}`);
                 } else {
-                    // For client-side disconnects, keep socketId for a while
                     await userModel.findByIdAndUpdate(
                         this.userId,
                         updateData
                     );
-                    console.log(`📴 User ${this.userId} marked as offline, keeping socketId for possible reconnection`);
+                    console.log(`📴 User ${this.userId} marked as offline`);
                 }
             } 
             else if (this.userType === 'captain' && this.userId) {
@@ -537,13 +508,11 @@ class SocketController {
                         this.userId,
                         { $unset: { socketId: 1 }, ...updateData }
                     );
-                    console.log(`❌ Captain ${this.userId} socket ID removed due to ${reason}`);
                 } else {
                     await captainModel.findByIdAndUpdate(
                         this.userId,
                         updateData
                     );
-                    console.log(`📴 Captain ${this.userId} marked as offline, keeping socketId`);
                 }
             } 
             else if (this.userType === "parent" && this.userId) {
@@ -552,18 +521,15 @@ class SocketController {
                         this.userId,
                         { $unset: { socketId: 1 }, ...updateData }
                     );
-                    console.log(`❌ Parent ${this.userId} socket ID removed due to ${reason}`);
                 } else {
                     await parentModel.findByIdAndUpdate(
                         this.userId,
                         updateData
                     );
-                    console.log(`📴 Parent ${this.userId} marked as offline, keeping socketId`);
                 }
             } 
             else {
-                // If we don't have user info, clean up by socketId as before
-                // This handles cases where join wasn't completed
+                // Clean up unknown connection
                 await Promise.all([
                     userModel.findOneAndUpdate(
                         { socketId: this.socket.id },
@@ -578,14 +544,29 @@ class SocketController {
                         { $unset: { socketId: 1 }, isOnline: false, lastSeen: new Date() }
                     )
                 ]);
-                console.log(`🧹 Cleaned up unknown connection with socket ${this.socket.id}`);
             }
             
         } catch (err) {
-            console.error('Error cleaning up socket ID at socket.js:', err);
+            console.error('Error cleaning up socket ID:', err);
         }
     };
 
+    // Parent status update handler
+    handleParentStatusUpdate = async (data) => {
+        try {
+            const { userId, parentId, status } = data;
+            const userRoom = `user:${userId}`;
+            
+            this.io.to(userRoom).emit('parent-status-changed', {
+                parentId: parentId,
+                status: status,
+                hasParent: status === 'connected',
+                timestamp: new Date()
+            });
+        } catch (err) {
+            console.error('Error updating parent status:', err);
+        }
+    };
 
     // Ping handler
     handlePing = (data) => {
@@ -597,32 +578,23 @@ class SocketController {
         console.error('Socket error from client:', this.socket.id, error);
     };
 
-    handleReconnect = async () => {
-        this.reconnectionAttempts++;
-        
-        if (this.reconnectionAttempts > this.maxReconnectionAttempts) {
-            console.log(`⚠️ Too many reconnection attempts for user ${this.userId}, type ${this.userType}`);
-            // Force remove socket ID after too many attempts
-            if (this.userType === 'user' && this.userId) {
-                await userModel.findByIdAndUpdate(
-                    this.userId,
-                    { $unset: { socketId: 1 }, isOnline: false }
-                );
-            } else if (this.userType === 'captain' && this.userId) {
-                await captainModel.findByIdAndUpdate(
-                    this.userId,
-                    { $unset: { socketId: 1 }, isOnline: false }
-                );
-            } else if (this.userType === 'parent' && this.userId) {
-                await parentModel.findByIdAndUpdate(
-                    this.userId,
-                    { $unset: { socketId: 1 }, isOnline: false }
-                );
-            }
-        }
+    
+
+    // New method to broadcast to all users of a type
+    broadcastToUserType = (userType, event, data) => {
+        const room = `${userType}s`;
+        this.io.to(room).emit(event, data);
+        console.log(`📢 Broadcast to ${room}: ${event}`);
     };
 
-    // Helper method to clean up stale socket IDs (run periodically)
+    // New method to send to specific user
+    sendToUser = (userId, userType, event, data) => {
+        const room = `${userType}:${userId}`;
+        this.io.to(room).emit(event, data);
+        console.log(`📤 Sent to ${room}: ${event}`);
+    };
+
+    // Helper method to clean up stale socket IDs
     static async cleanupStaleSockets() {
         try {
             const timeout = 5 * 60 * 1000; // 5 minutes
@@ -638,7 +610,7 @@ class SocketController {
                 { $unset: { socketId: 1 } }
             );
             
-            // Clean up captains who have been offline for too long
+            // Clean up captains
             await captainModel.updateMany(
                 { 
                     isOnline: false,
@@ -648,7 +620,7 @@ class SocketController {
                 { $unset: { socketId: 1 } }
             );
             
-            // Clean up parents who have been offline for too long
+            // Clean up parents
             await parentModel.updateMany(
                 { 
                     isOnline: false,
@@ -664,26 +636,30 @@ class SocketController {
         }
     }
 
-
-}
-
-// Static method to send message to specific socket
-// Static method to send message to specific socket
-SocketController.sendMessageToSocketId = (io, socketId, messageObject) => {
-    console.log('📤 Sending message to socket:', socketId, messageObject);
-
-    if (io) {
-        const socket = io.sockets.sockets.get(socketId);
-        if (socket && socket.connected) {
-            socket.emit(messageObject.event, messageObject.data);
-            console.log(`✅ Message sent to socket ${socketId}`);
+    // Static method to send message to user room (for use outside socket events)
+    static sendToUserRoom = (io, userId, userType, event, data) => {
+        console.log('📤 Sending message to user room:', { userId, userType, event });
+        const room = `${userType}:${userId}`;
+        
+        if (io) {
+            io.to(room).emit(event, data);
+            console.log(`✅ Message sent to room ${room}`);
             return true;
         } else {
-            console.log(`❌ Socket ${socketId} not found or not connected`);
+            console.log('❌ Socket.io not initialized.');
             return false;
         }
-    } else {
-        console.log('❌ Socket.io not initialized.');
+    }
+
+    // Static method to broadcast to all users of a type
+    static broadcastToUserType = (io, userType, event, data) => {
+        const room = `${userType}s`;
+        console.log(`📢 Broadcasting to ${room}: ${event}`);
+        
+        if (io) {
+            io.to(room).emit(event, data);
+            return true;
+        }
         return false;
     }
 }

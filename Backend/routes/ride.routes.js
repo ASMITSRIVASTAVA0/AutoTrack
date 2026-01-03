@@ -5,15 +5,20 @@ const rideController = require('../controllers/ride.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 
 
+
+// req from frontend, pages.home/controller.user/useRideManagement.js
 router.post('/create',
     authMiddleware.authUser,
-    body('pickup').isObject().withMessage('Pickup must be an object'),
     body('pickup.address').isString().isLength({ min: 3 }).withMessage('Invalid pickup address'),
-    body('destination').isObject().withMessage('Destination must be an object'),
     body('destination.address').isString().isLength({ min: 3 }).withMessage('Invalid destination address'),
     body('vehicleType').isString().isIn([ 'auto', 'car', 'moto' ]).withMessage('Invalid vehicle type'),
+    // body("fare").exists
     rideController.createRide
 )
+
+
+
+
 
 router.get('/get-fare',
     authMiddleware.authUser,

@@ -31,3 +31,16 @@ perform testing(load capacity/numeric data) and add results
 add security to cyber attacks
 
 add videocall facility in which par can do a video call with user
+
+curr project is bad on dark mode
+
+
+FOR CHATING FEATURE, USE BITCHAT ARCHITECTURE THAT IS USED BY FOUNDER OF TWITTER IN WHICH DATA IS SPLIT INTO TINY PACKETS CALLED LZ4, CREATING MESH LIKE BLUETOOTH NETWORK, MAKE MESSAGE END TO END ENCRPTED, MAKE MESSAGE TIME TO LIVE SO MESSAGE GETS REMOVED BY LET 24 HOURS, SO MAKE MESSAGE STORE ON RAM INSTEAD OF DISK
+
+THINK HOW TO REDUCE NETWORK LATENCY WHEN MAKING MICROSERVICE
+
+frontend deploy at 3 hosts(user,par,captain)
+
+RATE LIMITING TO PREVENT DDOS ATTACK
+
+allow only landing page to req user/par/captain-app and chat 

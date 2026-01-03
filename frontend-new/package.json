@@ -1,0 +1,40 @@
+{
+  "name": "autotrack-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+
+  ],
+  "type": "module",
+  "scripts": {
+    "dev:landing": "npm run dev --workspace=apps/landing-app",
+    "dev:captain": "npm run dev --workspace=apps/captain-app",
+    "dev:parent": "npm run dev --workspace=apps/parent-app",
+    "dev:user": "npm run dev --workspace=apps/user-app",
+    "dev": "npm-run-all --parallel dev:captain dev:parent dev:user dev:landing",
+    "build:landing": "npm run build --workspace=apps/landing-app",
+    "build:captain": "npm run build --workspace=apps/captain-app",
+    "build:parent": "npm run build --workspace=apps/parent-app",
+    "build:user": "npm run build --workspace=apps/user-app",
+    "build": "npm-run-all build:captain build:parent build:user build:landing",
+    "preview:landing": "npm run preview --workspace=apps/landing-app",
+    "preview:captain": "npm run preview --workspace=apps/captain-app",
+    "preview:parent": "npm run preview --workspace=apps/parent-app",
+    "preview:user": "npm run preview --workspace=apps/user-app"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "axios": "^1.13.2",
+    "gsap": "^3.14.2",
+    "leaflet": "^1.9.4",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.11.0",
+    "remixicon": "^4.7.0",
+    "socket.io-client": "^4.8.3"
+  }
+}

@@ -1,3 +1,14 @@
+
+
+
+
+
+// this file sets, user,parent,captain in req.body after validation
+
+
+
+
+
 const userModel = require('../models/user.model');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -22,7 +33,7 @@ module.exports.authUser = async (req, res, next) => {
 
     try {
     
-        const decoded = jwt.verify(tokenUser, process.env.JWT_SECRET);
+        const decoded = jwt.verify(tokenUser, process.env.JWT_SECRET+"user");
         
         const user = await userModel.findById(decoded._id)
 
@@ -37,7 +48,7 @@ module.exports.authUser = async (req, res, next) => {
 
 module.exports.authCaptain = async (req, res, next) => {
     const tokenCaptain = req.cookies.tokenCaptain || req.headers.authorization?.split(' ')[1];
-    console.log("tokenCaptain="+tokenCaptain);
+    // console.log("tokenCaptain="+tokenCaptain);
     if (!tokenCaptain) {
         return res.status(401).json({ message: 'Unauthorized Captain' });
     }
@@ -49,7 +60,7 @@ module.exports.authCaptain = async (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(tokenCaptain, process.env.JWT_SECRET);
+        const decoded = jwt.verify(tokenCaptain, process.env.JWT_SECRET+"captain");
         
         const captain = await captainModel.findById(decoded._id);
         req.captain = captain;
@@ -75,7 +86,7 @@ module.exports.authParent = async (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(tokenParent, process.env.JWT_SECRET);
+        const decoded = jwt.verify(tokenParent, process.env.JWT_SECRET+"parent");
         
         const parent = await parentModel.findById(decoded._id)
 

@@ -5,12 +5,14 @@ let io;
 const socketIo = require('socket.io');
 
 function initializeSocket(server) {
-    // io defined kiya
     io = socketIo(server, {
         cors: {
             origin: [
                 "http://localhost:4000",
                 'http://localhost:3000',
+                'http://localhost:3001',
+                'http://localhost:3002',
+                'http://localhost:3003',
                 'http://localhost:5173', 
                 'https://autotrack-frontend.vercel.app',
             ],
@@ -20,7 +22,6 @@ function initializeSocket(server) {
         pingTimeout: 60000,
         pingInterval: 25000,
         connectionStateRecovery: {
-            // Enable connection state recovery
             maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
             skipMiddlewares: true,
         }
@@ -33,23 +34,18 @@ function initializeSocket(server) {
         // Create controller instance for this socket
         const controller = new SocketController(io, socket);
 
-        // User joins
+
+        // Home.jsx, ParentHome.jsx, CaptainHome.jsx emit this event
+        // User joins (now joins rooms automatically)
         socket.on('join', controller.handleJoin);
 
-        // Handle reconnection events
-        socket.on('reconnect', () => {
-            console.log(`🔄 Socket ${socket.id} reconnected`);
-            controller.handleReconnect();
-        });
-
-        // Handle reconnection attempts
-        socket.on('reconnect_attempt', (attemptNumber) => {
-            console.log(`🔄 Socket reconnection attempt ${attemptNumber} for ${socket.id}`);
-        });
-
-        // Captain location update, and notify ONLY parent
+      
+        // CaptainHome.jsx emit this event
+        // Captain location update
         socket.on('update-location-captain', controller.handleUpdateLocationCaptain);
 
+
+        // ride.controller.js emit this on ConfirmRide() that is called by 
         // Ride accepted by captain - notify parent
         socket.on('ride-accepted', controller.handleRideAccepted);
 
@@ -98,13 +94,22 @@ function initializeSocket(server) {
         console.error('Connection error:', err);
     });
 
-    // inital cleanup of stale sockets
+    // Initial cleanup of stale sockets
     SocketController.cleanupStaleSockets();
 
 }
 
-const sendMessageToSocketId = (socketId, messageObject) => {
-    SocketController.sendMessageToSocketId(io, socketId, messageObject);
+// Export room-based methods for use in other parts of your app
+const sendToUserRoom = (userId, userType, event, data) => {
+    SocketController.sendToUserRoom(io, userId, userType, event, data);
 }
 
-module.exports = { initializeSocket, sendMessageToSocketId };
+const broadcastToUserType = (userType, event, data) => {
+    SocketController.broadcastToUserType(io, userType, event, data);
+}
+
+module.exports = { 
+    initializeSocket, 
+    sendToUserRoom, 
+    broadcastToUserType 
+};
